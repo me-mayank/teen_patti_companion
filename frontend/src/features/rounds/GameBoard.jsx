@@ -126,7 +126,7 @@ const GameBoard = () => {
   };
 
   const isMyTurn = round && round.players[round.currentTurnIndex]?.userId._id === user._id;
-  const activePlayersCount = round?.players.filter(p => p.status === 'ACTIVE').length || 0;
+  const activePlayersCount = round?.players?.filter(p => p.status === 'ACTIVE').length || 0;
 
   if (loading) {
     return (
@@ -229,7 +229,7 @@ const GameBoard = () => {
           {/* Players Circular Layout Placeholder (Absolute positioning based on turn order) */}
           <div className="absolute inset-0 pointer-events-none">
             <div className="w-full h-full flex flex-wrap items-center justify-around p-2 sm:p-8">
-              {round?.players.map((p, i) => {
+              {round?.players?.map((p, i) => {
                 const gameParticipant = game?.participants.find(gp => gp.userId._id === p.userId._id);
                 const playerWithBalance = {
                   ...p,
