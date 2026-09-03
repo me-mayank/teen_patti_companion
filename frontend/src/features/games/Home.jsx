@@ -124,10 +124,14 @@ const Home = () => {
             </button>
             <button 
               onClick={() => navigate('/profile')}
-              className="p-2 sm:p-3 bg-slate-900 border border-slate-800 rounded-full text-slate-400 hover:text-white hover:bg-slate-800 transition-all"
+              className={`bg-slate-900 border border-slate-800 rounded-full text-slate-400 hover:text-white hover:bg-slate-800 transition-all flex items-center justify-center overflow-hidden ${user?.profilePicture ? 'w-[34px] h-[34px] sm:w-[46px] sm:h-[46px]' : 'p-2 sm:p-3'}`}
               title="Profile"
             >
-              <UserCircle className="w-4 h-4 sm:w-5 sm:h-5" />
+              {user?.profilePicture ? (
+                <img src={user.profilePicture} alt="Profile" className="w-full h-full object-cover" />
+              ) : (
+                <UserCircle className="w-4 h-4 sm:w-5 sm:h-5" />
+              )}
             </button>
             <button 
               onClick={logout}
