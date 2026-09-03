@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
-import { ArrowLeft, User, Mail, Wallet, Shield, Edit2, Loader2, X, LogOut } from 'lucide-react';
+import { ArrowLeft, User, Mail, Wallet, AtSign, Edit2, Loader2, X, LogOut } from 'lucide-react';
 import axiosClient from '../../shared/api/axiosClient';
 import * as usersApi from './users.api';
 
@@ -147,7 +147,7 @@ const Profile = () => {
                 </div>
               </div>
               <div className="p-4 border-b border-slate-800/50 flex items-center gap-3">
-                <Shield className="text-emerald-400 w-5 h-5" />
+                <AtSign className="text-emerald-400 w-5 h-5" />
                 <span className="text-slate-400 font-medium text-sm">Username</span>
                 <span className="text-white ml-auto">@{profileData?.username}</span>
                 <button 
