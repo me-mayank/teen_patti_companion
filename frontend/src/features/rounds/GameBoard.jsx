@@ -279,35 +279,48 @@ const GameBoard = () => {
           </div>
         )}
 
-        <div className="relative w-full max-w-4xl aspect-square md:aspect-video flex items-center justify-center mb-4 sm:mb-8 mt-4 sm:mt-0">
+        <div className="relative w-full max-w-[500px] mx-auto aspect-square flex items-center justify-center mb-4 mt-4 sm:mt-8">
           
           {/* Central Pot Area */}
           <PotArea potAmount={round?.potAmount || 0} currentBet={round?.currentBet || game?.bootAmount || 0} />
 
-          {/* Players Circular Layout Placeholder (Absolute positioning based on turn order) */}
+          {/* Players Circular Layout */}
           <div className="absolute inset-0 pointer-events-none">
-            <div className="w-full h-full flex flex-wrap items-center justify-around p-2 sm:p-8">
-              {round?.players?.map((p, i) => {
-                const gameParticipant = game?.participants?.find(gp => gp.userId?._id === p.userId?._id);
-                const playerWithBalance = {
-                  ...p,
-                  balance: gameParticipant?.balance || 0,
-                  isCreator: game?.createdBy?._id === p.userId?._id
-                };
-                
-                return (
-                  <div key={p.userId?._id || i} className="pointer-events-auto">
-                    <PlayerCircle 
-                      player={playerWithBalance} 
-                      isCurrentTurn={round.currentTurnIndex === i} 
-                      isMe={p.userId?._id === user._id}
-                      onSideShowTargetSelect={handleSideShowTargetSelect}
-                      pendingSideShow={pendingTargetSelection}
-                    />
-                  </div>
-                );
-              })}
-            </div>
+            {round?.players?.map((p, i) => {
+              const gameParticipant = game?.participants?.find(gp => gp.userId?._id === p.userId?._id);
+              const playerWithBalance = {
+                ...p,
+                balance: gameParticipant?.balance || 0,
+                isCreator: game?.createdBy?._id === p.userId?._id
+              };
+              
+              const totalPlayers = round.players.length;
+              // Arrange them sequentially around the circle starting from top
+              const angle = (i / totalPlayers) * 2 * Math.PI - Math.PI / 2;
+              const radius = 45; // 45% of container width/height
+              const left = 50 + radius * Math.cos(angle);
+              const top = 50 + radius * Math.sin(angle);
+              
+              return (
+                <div 
+                  key={p.userId?._id || i} 
+                  className="absolute pointer-events-auto"
+                  style={{
+                    left: `${left}%`,
+                    top: `${top}%`,
+                    transform: 'translate(-50%, -50%)'
+                  }}
+                >
+                  <PlayerCircle 
+                    player={playerWithBalance} 
+                    isCurrentTurn={round.currentTurnIndex === i} 
+                    isMe={p.userId?._id === user._id}
+                    onSideShowTargetSelect={handleSideShowTargetSelect}
+                    pendingSideShow={pendingTargetSelection}
+                  />
+                </div>
+              );
+            })}
           </div>
         </div>
 
