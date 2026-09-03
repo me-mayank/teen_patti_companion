@@ -249,6 +249,10 @@ const requestSideShow = async (roundId, userId) => {
       throw new Error('Side show requires more than 2 active players');
     }
 
+    const prevIndex = turnManager.getPreviousActivePlayerIndex(round.players, round.currentTurnIndex);
+    if (prevIndex === null) throw new Error('Could not find previous active player');
+    const targetUserId = round.players[prevIndex].userId;
+
     const betAmount = round.currentBet;
 
     // Record side show fee
@@ -262,15 +266,104 @@ const requestSideShow = async (roundId, userId) => {
 
     round.potAmount += betAmount;
     
-    const nextIndex = turnManager.getNextActivePlayerIndex(round.players, round.currentTurnIndex);
-    if (nextIndex === null) throw new Error('No active players found');
-    
-    round.currentTurnIndex = nextIndex;
+    // Enter pending state, DO NOT advance turn yet
+    round.status = 'SIDE_SHOW_PENDING';
+    round.sideShowRequest = {
+      requestedBy: userId,
+      targetPlayer: targetUserId,
+      result: 'PENDING'
+    };
     
     await round.save({ session });
     await session.commitTransaction();
     
     _emitUpdate(game._id);
+    return round;
+  } catch (error) {
+    await session.abortTransaction();
+    throw error;
+  } finally {
+    session.endSession();
+  }
+};
+
+const respondSideShow = async (roundId, userId, accept) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  try {
+    const round = await Round.findById(roundId).session(session);
+    if (round.status !== 'SIDE_SHOW_PENDING') throw new Error('No side show pending');
+    
+    const request = round.sideShowRequest;
+    if (request.targetPlayer.toString() !== userId.toString()) {
+      throw new Error('You are not the target of this side show');
+    }
+
+    if (!accept) {
+      // Declined, turn advances
+      round.status = 'ACTIVE';
+      round.sideShowRequest = null;
+      const nextIndex = turnManager.getNextActivePlayerIndex(round.players, round.currentTurnIndex);
+      round.currentTurnIndex = nextIndex;
+      await round.save({ session });
+      await session.commitTransaction();
+      _emitUpdate(round.gameId);
+      return round;
+    }
+
+    // Accepted, waiting for result to be posted
+    request.result = 'ACCEPTED';
+    await round.save({ session });
+    await session.commitTransaction();
+    _emitUpdate(round.gameId);
+    return round;
+  } catch (error) {
+    await session.abortTransaction();
+    throw error;
+  } finally {
+    session.endSession();
+  }
+};
+
+const submitSideShowResult = async (roundId, userId, loserUserId) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  try {
+    const round = await Round.findById(roundId).session(session);
+    if (round.status !== 'SIDE_SHOW_PENDING' || round.sideShowRequest?.result !== 'ACCEPTED') {
+      throw new Error('Invalid side show state');
+    }
+
+    const request = round.sideShowRequest;
+    const reqBy = request.requestedBy.toString();
+    const tgt = request.targetPlayer.toString();
+    
+    if (userId.toString() !== reqBy && userId.toString() !== tgt) {
+      throw new Error('Only participants can submit result');
+    }
+    
+    if (loserUserId.toString() !== reqBy && loserUserId.toString() !== tgt) {
+      throw new Error('Loser must be one of the players involved in the side show');
+    }
+
+    const loser = round.players.find(p => p.userId.toString() === loserUserId.toString());
+    if (!loser) throw new Error('Loser not found');
+
+    loser.status = 'PACKED';
+    round.status = 'ACTIVE';
+    round.sideShowRequest = null;
+
+    const winner = turnManager.checkOnePlayerRemaining(round.players);
+    if (winner) {
+      await _completeRound(session, round, winner.userId);
+    } else {
+      const nextIndex = turnManager.getNextActivePlayerIndex(round.players, round.currentTurnIndex);
+      round.currentTurnIndex = nextIndex;
+      await round.save({ session });
+    }
+
+    await session.commitTransaction();
+    _emitUpdate(round.gameId);
     return round;
   } catch (error) {
     await session.abortTransaction();

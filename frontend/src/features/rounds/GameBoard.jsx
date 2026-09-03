@@ -192,6 +192,86 @@ const GameBoard = () => {
       {/* Main Board Area */}
       <div className="flex-1 relative z-10 flex flex-col items-center justify-center p-4">
         
+        {/* Side Show Overlay */}
+        {round?.status === 'SIDE_SHOW_PENDING' && (() => {
+          const ssReq = round.sideShowRequest;
+          const isTarget = ssReq?.targetPlayer === user._id;
+          const isRequester = ssReq?.requestedBy === user._id;
+          const targetPlayerObj = round.players.find(p => p.userId?._id === ssReq?.targetPlayer);
+          const reqPlayerObj = round.players.find(p => p.userId?._id === ssReq?.requestedBy);
+
+          if (ssReq?.result === 'PENDING') {
+            return (
+              <div className="absolute inset-0 bg-slate-950/90 backdrop-blur-md z-50 flex flex-col items-center justify-center p-4">
+                <h2 className="text-3xl font-bold text-[#D7A656] mb-6">Side Show Requested!</h2>
+                {isTarget ? (
+                  <>
+                    <p className="text-xl text-white mb-8">{reqPlayerObj?.userId?.name} wants a Side Show with you.</p>
+                    <div className="flex gap-6">
+                      <button 
+                        onClick={async () => { setProcessing(true); try { await roundApi.respondSideShow(round._id, true); } catch (e) { alert(e.response?.data?.message || 'Error'); } finally { setProcessing(false); } }}
+                        disabled={processing}
+                        className="bg-[#D7A656] text-black font-bold px-8 py-3 rounded-xl hover:bg-[#c2954c] transition-all"
+                      >
+                        Accept
+                      </button>
+                      <button 
+                        onClick={async () => { setProcessing(true); try { await roundApi.respondSideShow(round._id, false); } catch (e) { alert(e.response?.data?.message || 'Error'); } finally { setProcessing(false); } }}
+                        disabled={processing}
+                        className="bg-red-950/50 border border-red-500/50 text-red-500 font-bold px-8 py-3 rounded-xl hover:bg-red-900/50 transition-all"
+                      >
+                        Decline
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <p className="text-xl text-slate-300 animate-pulse text-center">
+                    {isRequester ? `Waiting for ${targetPlayerObj?.userId?.name} to respond...` : `Waiting for ${targetPlayerObj?.userId?.name} to respond to ${reqPlayerObj?.userId?.name}...`}
+                  </p>
+                )}
+              </div>
+            );
+          }
+          
+          if (ssReq?.result === 'ACCEPTED') {
+            return (
+              <div className="absolute inset-0 bg-slate-950/90 backdrop-blur-md z-50 flex flex-col items-center justify-center p-4">
+                <h2 className="text-3xl font-bold text-[#D7A656] mb-6">Side Show: Compare Cards!</h2>
+                {(isTarget || isRequester) ? (
+                  <>
+                    <p className="text-lg text-slate-300 mb-8 text-center max-w-md">Compare your cards in real life. Please select the player who <strong>LOST</strong> the side show.</p>
+                    <div className="flex gap-4 sm:gap-8 justify-center">
+                      {[reqPlayerObj, targetPlayerObj].map(p => (
+                         <button
+                           key={p.userId?._id}
+                           onClick={async () => {
+                             setProcessing(true);
+                             try { await roundApi.submitSideShowResult(round._id, p.userId?._id); }
+                             catch (e) { alert(e.response?.data?.message || 'Error'); }
+                             finally { setProcessing(false); }
+                           }}
+                           disabled={processing}
+                           className="bg-[#12100F] border-2 border-red-500/30 hover:border-red-500 hover:bg-[#1A1714] p-6 rounded-2xl flex flex-col items-center gap-4 transition-all min-w-[160px] shadow-lg shadow-black/50"
+                         >
+                           <div className="w-20 h-20 rounded-full bg-[#070606] border-2 border-red-500/50 flex items-center justify-center text-3xl font-bold text-white shadow-inner">
+                             {p.userId?.name?.charAt(0).toUpperCase()}
+                           </div>
+                           <span className="font-bold text-xl text-white">{p.userId?.name}</span>
+                           <span className="text-red-500 text-sm font-medium">Select as Loser</span>
+                         </button>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <p className="text-xl text-slate-300 animate-pulse text-center">
+                    {reqPlayerObj?.userId?.name} and {targetPlayerObj?.userId?.name} are comparing cards...
+                  </p>
+                )}
+              </div>
+            );
+          }
+        })()}
+
         {/* Showdown Overlay */}
         {round?.status === 'SHOW_PENDING' && (
           <div className="absolute inset-0 bg-slate-950/90 backdrop-blur-md z-50 flex flex-col items-center justify-center p-4">

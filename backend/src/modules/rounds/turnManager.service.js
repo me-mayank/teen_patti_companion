@@ -16,7 +16,27 @@ const getNextActivePlayerIndex = (players, currentIndex) => {
     loopCount++;
   }
 
-  // Should never really happen unless 0 players are active
+  return null;
+};
+
+/**
+ * Finds the index of the PREVIOUS ACTIVE player in the round.
+ * @param {Array} players - The Round.players array
+ * @param {Number} currentIndex - The Round.currentTurnIndex
+ * @returns {Number|null} - The index of the previous active player, or null if no other active players exist
+ */
+const getPreviousActivePlayerIndex = (players, currentIndex) => {
+  let prevIndex = (currentIndex - 1 + players.length) % players.length;
+  let loopCount = 0;
+
+  while (loopCount < players.length) {
+    if (players[prevIndex].status === 'ACTIVE') {
+      return prevIndex;
+    }
+    prevIndex = (prevIndex - 1 + players.length) % players.length;
+    loopCount++;
+  }
+
   return null;
 };
 
@@ -35,5 +55,6 @@ const checkOnePlayerRemaining = (players) => {
 
 module.exports = {
   getNextActivePlayerIndex,
+  getPreviousActivePlayerIndex,
   checkOnePlayerRemaining,
 };

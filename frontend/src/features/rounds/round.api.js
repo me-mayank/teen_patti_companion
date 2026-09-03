@@ -30,6 +30,16 @@ export const requestSideShow = async (roundId) => {
   return response.data;
 };
 
+export const respondSideShow = async (roundId, accept) => {
+  const response = await axiosClient.post(`/rounds/${roundId}/side-show/respond`, { accept });
+  return response.data;
+};
+
+export const submitSideShowResult = async (roundId, loserUserId) => {
+  const response = await axiosClient.post(`/rounds/${roundId}/side-show/result`, { loserUserId });
+  return response.data;
+};
+
 export const requestShow = async (roundId) => {
   const response = await axiosClient.post(`/rounds/${roundId}/show/request`);
   return response.data;
