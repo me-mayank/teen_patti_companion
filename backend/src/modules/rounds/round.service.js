@@ -10,6 +10,23 @@ const _emitUpdate = (gameId) => {
   getIO().to(`game:${gameId}`).emit('round:update', { gameId });
 };
 
+const User = require('../users/user.model');
+
+const _checkBalance = async (game, userId, amountRequired, session) => {
+  const participant = game.participants.find(p => p.userId.toString() === userId.toString());
+  if (!participant) throw new Error('Participant not found');
+
+  const user = await User.findById(userId).session(session);
+  if (!user) throw new Error('User not found');
+
+  const availableBalance = user.globalBalance + participant.balance;
+  if (availableBalance < amountRequired) {
+    const err = new Error(`Insufficient wallet balance. Required: ₹${amountRequired}, Available: ₹${availableBalance}`);
+    err.statusCode = 400;
+    throw err;
+  }
+};
+
 const startRound = async (gameId, userId) => {
   const session = await mongoose.startSession();
   session.startTransaction();
@@ -31,6 +48,11 @@ const startRound = async (gameId, userId) => {
 
     const roundNumber = game.currentRoundNumber + 1;
     const bootAmount = game.bootAmount;
+
+    // Check balance for all players
+    for (const uId of game.turnOrder) {
+      await _checkBalance(game, uId, bootAmount, session);
+    }
 
     // Create Round players array from game.turnOrder
     const players = game.turnOrder.map(uId => ({
@@ -130,6 +152,8 @@ const bet = async (roundId, userId) => {
     if (round.status !== 'ACTIVE') throw new Error('Round is not in ACTIVE state');
 
     const betAmount = round.currentBet;
+    await _checkBalance(game, userId, betAmount, session);
+    
     round.potAmount += betAmount;
     currentPlayer.totalContribution += betAmount;
 
@@ -175,6 +199,8 @@ const betTwice = async (roundId, userId) => {
       err.statusCode = 400;
       throw err;
     }
+    
+    await _checkBalance(game, userId, newBet, session);
 
     round.currentBet = newBet;
     round.potAmount += newBet;
@@ -264,6 +290,7 @@ const requestSideShow = async (roundId, userId) => {
       amount: -betAmount,
     });
 
+    await _checkBalance(game, userId, betAmount, session);
     round.potAmount += betAmount;
     
     // Enter pending state, DO NOT advance turn yet
@@ -389,6 +416,7 @@ const requestShow = async (roundId, userId) => {
     }
 
     const betAmount = round.currentBet;
+    await _checkBalance(game, userId, betAmount, session);
     round.potAmount += betAmount;
     currentPlayer.totalContribution += betAmount;
 
