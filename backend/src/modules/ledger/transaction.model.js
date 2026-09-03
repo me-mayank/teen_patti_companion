@@ -10,7 +10,7 @@ const transactionSchema = new mongoose.Schema(
     gameId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Game',
-      required: true,
+      // Optional for global fees
     },
     roundId: {
       type: mongoose.Schema.Types.ObjectId,
@@ -19,7 +19,7 @@ const transactionSchema = new mongoose.Schema(
     },
     type: {
       type: String,
-      enum: ['BOOT', 'BET', 'BET_TWICE', 'ROUND_WIN', 'SETTLEMENT', 'ADJUSTMENT'],
+      enum: ['BOOT', 'BET', 'BET_TWICE', 'ROUND_WIN', 'SETTLEMENT', 'ADJUSTMENT', 'SHOW_FEE', 'FEE'],
       required: true,
     },
     amount: {

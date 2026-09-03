@@ -16,11 +16,13 @@ const recordTransaction = async (session, { userId, gameId, roundId, type, amoun
   }], options);
 
   // 2. Update the denormalized balance on the Game object
-  await Game.updateOne(
-    { _id: gameId, 'participants.userId': userId },
-    { $inc: { 'participants.$.balance': amount } },
-    options
-  );
+  if (gameId) {
+    await Game.updateOne(
+      { _id: gameId, 'participants.userId': userId },
+      { $inc: { 'participants.$.balance': amount } },
+      options
+    );
+  }
 
   return transaction;
 };
