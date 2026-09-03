@@ -6,6 +6,7 @@ import { Gamepad2, AlertCircle } from 'lucide-react';
 const Register = () => {
   const [name, setName] = useState('');
   const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -17,7 +18,7 @@ const Register = () => {
     setError('');
     setLoading(true);
     try {
-      await register({ name, username, password });
+      await register({ name, username, email, password });
       navigate('/');
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to register');
@@ -70,6 +71,18 @@ const Register = () => {
                 onChange={(e) => setUsername(e.target.value)}
                 className="w-full bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all"
                 placeholder="Choose a unique username"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-2">Email Address</label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all"
+                placeholder="your@email.com"
                 required
               />
             </div>

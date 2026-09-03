@@ -106,7 +106,7 @@ const GameBoard = () => {
     setProcessing(true);
     try {
       await gamesApi.endGame(gameId);
-      navigate(`/games/${gameId}/history`);
+      // We don't navigate immediately; the socket will update game.status to 'ENDED'
     } catch (err) {
       alert(err.response?.data?.message || 'Failed to end game');
     } finally {
@@ -121,6 +121,42 @@ const GameBoard = () => {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center">
         <Loader2 className="w-8 h-8 text-emerald-500 animate-spin" />
+      </div>
+    );
+  }
+
+  if (game?.status === 'ENDED') {
+    const winner = game.participants?.reduce((prev, current) => (prev.balance > current.balance) ? prev : current);
+    
+    return (
+      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4">
+        <div className="bg-slate-900 border border-slate-800 p-8 rounded-3xl max-w-md w-full text-center shadow-2xl relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-emerald-400 to-emerald-600"></div>
+          <Crown className="w-16 h-16 text-yellow-400 mx-auto mb-6" />
+          <h2 className="text-3xl font-bold text-white mb-2">Game Over!</h2>
+          <p className="text-slate-400 mb-8">The final scores have been tallied and balances applied to profiles.</p>
+          
+          <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-6 mb-8">
+            <p className="text-emerald-400 font-medium mb-1">Overall Winner</p>
+            <p className="text-2xl font-bold text-white mb-2">{winner?.userId?.name || winner?.userId?.username}</p>
+            <p className="text-xl font-bold text-emerald-400">+₹{winner?.balance?.toLocaleString() || 0}</p>
+          </div>
+
+          <div className="flex gap-4">
+            <button 
+              onClick={() => navigate(`/games/${gameId}/history`)}
+              className="flex-1 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold py-3 rounded-xl transition-all"
+            >
+              Full History
+            </button>
+            <button 
+              onClick={() => navigate('/')}
+              className="flex-1 bg-slate-800 hover:bg-slate-700 text-white font-semibold py-3 rounded-xl transition-all"
+            >
+              Go Home
+            </button>
+          </div>
+        </div>
       </div>
     );
   }

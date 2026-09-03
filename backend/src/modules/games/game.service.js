@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const Game = require('./game.model');
 
 const createGame = async (gameData) => {
@@ -146,9 +147,33 @@ const endGame = async (gameId, userId) => {
     throw new Error('Cannot end game while a round is in progress');
   }
 
-  game.status = 'ENDED';
-  game.endedAt = new Date();
-  await game.save();
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    game.status = 'ENDED';
+    game.endedAt = new Date();
+    await game.save({ session });
+
+    // Update global balances
+    const User = require('../users/user.model');
+    for (const p of game.participants) {
+      if (p.balance !== 0) {
+        await User.findByIdAndUpdate(
+          p.userId,
+          { $inc: { globalBalance: p.balance } },
+          { session }
+        );
+      }
+    }
+
+    await session.commitTransaction();
+  } catch (err) {
+    await session.abortTransaction();
+    throw err;
+  } finally {
+    session.endSession();
+  }
 
   const { getIO } = require('../../shared/sockets');
   getIO().to(`game:${gameId}`).emit('game:update', { gameId });

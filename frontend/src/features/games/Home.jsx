@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import * as gamesApi from './games.api';
 import * as invitationsApi from '../invitations/invitations.api';
-import { Plus, Play, History, Bell, LogOut, Loader2, Check, X } from 'lucide-react';
+import { Plus, Play, History, Bell, LogOut, Loader2, Check, X, UserCircle } from 'lucide-react';
 
 const Home = () => {
   const { user, logout } = useAuth();
@@ -68,13 +68,22 @@ const Home = () => {
             </h1>
             <p className="text-slate-400">Ready to play Teen Patti?</p>
           </div>
-          <button 
-            onClick={logout}
-            className="p-3 bg-slate-900 border border-slate-800 rounded-full text-slate-400 hover:text-white hover:bg-slate-800 transition-all"
-            title="Sign out"
-          >
-            <LogOut className="w-5 h-5" />
-          </button>
+          <div className="flex gap-2">
+            <button 
+              onClick={() => navigate('/profile')}
+              className="p-3 bg-slate-900 border border-slate-800 rounded-full text-slate-400 hover:text-white hover:bg-slate-800 transition-all"
+              title="Profile"
+            >
+              <UserCircle className="w-5 h-5" />
+            </button>
+            <button 
+              onClick={logout}
+              className="p-3 bg-slate-900 border border-slate-800 rounded-full text-slate-400 hover:text-white hover:bg-slate-800 transition-all"
+              title="Sign out"
+            >
+              <LogOut className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Invitations Section */}

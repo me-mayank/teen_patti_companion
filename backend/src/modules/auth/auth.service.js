@@ -8,11 +8,12 @@ const generateToken = (id) => {
   });
 };
 
-const registerUser = async ({ name, username, password }) => {
-  const userExists = await User.findOne({ username: username.toLowerCase() });
+const register = async (userData) => {
+  const { name, username, email, password } = userData;
 
-  if (userExists) {
-    throw new Error('User already exists');
+  const existingUser = await User.findOne({ $or: [{ username }, { email }] });
+  if (existingUser) {
+    throw new Error('Username or email already exists');
   }
 
   const salt = await bcrypt.genSalt(10);
@@ -20,7 +21,8 @@ const registerUser = async ({ name, username, password }) => {
 
   const user = await User.create({
     name,
-    username: username.toLowerCase(),
+    username,
+    email,
     passwordHash,
   });
 
@@ -32,10 +34,13 @@ const registerUser = async ({ name, username, password }) => {
   };
 };
 
-const loginUser = async ({ username, password }) => {
-  const user = await User.findOne({ username: username.toLowerCase() });
-
-  if (user && (await bcrypt.compare(password, user.passwordHash))) {
+const login = async (email, password) => {
+  const user = await User.findOne({ email });
+  if (!user) {
+    throw new Error('Invalid email or password');
+  } 
+  
+  if (await bcrypt.compare(password, user.passwordHash)) {
     return {
       _id: user._id,
       name: user.name,
@@ -43,7 +48,7 @@ const loginUser = async ({ username, password }) => {
       token: generateToken(user._id),
     };
   } else {
-    throw new Error('Invalid username or password');
+    throw new Error('Invalid email or password');
   }
 };
 
@@ -56,7 +61,7 @@ const getMe = async (userId) => {
 };
 
 module.exports = {
-  registerUser,
-  loginUser,
+  register,
+  login,
   getMe,
 };

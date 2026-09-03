@@ -8,6 +8,7 @@ import InvitationManagement from './features/invitations/InvitationManagement';
 import TurnOrderSetup from './features/turnOrder/TurnOrderSetup';
 import GameBoard from './features/rounds/GameBoard';
 import GameHistory from './features/games/GameHistory';
+import Profile from './features/users/Profile';
 import { Loader2 } from 'lucide-react';
 
 const ProtectedRoute = ({ children }) => {
@@ -42,6 +43,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <Home />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/profile" 
+            element={
+              <ProtectedRoute>
+                <Profile />
               </ProtectedRoute>
             } 
           />
