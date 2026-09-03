@@ -1,28 +1,49 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
-import { ArrowLeft, User, Mail, Wallet, Shield } from 'lucide-react';
+import { ArrowLeft, User, Mail, Wallet, Shield, Edit2, Loader2, X } from 'lucide-react';
 import axiosClient from '../../shared/api/axiosClient';
+import * as usersApi from './users.api';
 
 const Profile = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [profileData, setProfileData] = useState(null);
   const [loading, setLoading] = useState(true);
+  
+  const [showEditUsername, setShowEditUsername] = useState(false);
+  const [newUsername, setNewUsername] = useState('');
+  const [editing, setEditing] = useState(false);
+
+  const fetchProfile = async () => {
+    try {
+      const res = await axiosClient.get('/auth/me');
+      setProfileData(res.data);
+    } catch (err) {
+      console.error('Failed to fetch profile', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        const res = await axiosClient.get('/auth/me');
-        setProfileData(res.data);
-      } catch (err) {
-        console.error('Failed to fetch profile', err);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchProfile();
   }, []);
+
+  const handleChangeUsername = async (e) => {
+    e.preventDefault();
+    setEditing(true);
+    try {
+      await usersApi.changeUsername(newUsername);
+      await fetchProfile(); // refresh data
+      setShowEditUsername(false);
+      setNewUsername('');
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to change username');
+    } finally {
+      setEditing(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-slate-950 text-white">
@@ -78,6 +99,12 @@ const Profile = () => {
                 <Shield className="text-emerald-400 w-5 h-5" />
                 <span className="text-slate-400 font-medium text-sm">Username</span>
                 <span className="text-white ml-auto">@{profileData?.username}</span>
+                <button 
+                  onClick={() => setShowEditUsername(true)}
+                  className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-md transition-colors"
+                >
+                  <Edit2 className="w-4 h-4" />
+                </button>
               </div>
               <div className="p-4 flex items-center gap-3">
                 <Mail className="text-emerald-400 w-5 h-5" />
@@ -88,6 +115,45 @@ const Profile = () => {
           </div>
         )}
       </div>
+
+      {/* Edit Username Modal */}
+      {showEditUsername && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 md:p-8 max-w-md w-full shadow-2xl relative">
+            <button 
+              onClick={() => setShowEditUsername(false)}
+              className="absolute top-4 right-4 p-2 text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-full transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <h2 className="text-2xl font-bold text-emerald-400 mb-2">
+              Change Username
+            </h2>
+            <p className="text-slate-400 text-sm mb-6">
+              Changing your username costs <strong className="text-yellow-400">₹1,000</strong> from your global wallet.
+            </p>
+            <form onSubmit={handleChangeUsername}>
+              <input
+                type="text"
+                value={newUsername}
+                onChange={(e) => setNewUsername(e.target.value.toLowerCase())}
+                placeholder="New Username"
+                required
+                minLength={3}
+                maxLength={20}
+                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 mb-6 focus:outline-none focus:border-emerald-500 text-white"
+              />
+              <button
+                type="submit"
+                disabled={editing || !newUsername}
+                className="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {editing ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Pay ₹1000 & Change'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

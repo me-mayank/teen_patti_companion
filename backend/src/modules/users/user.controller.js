@@ -13,6 +13,27 @@ const getUsers = asyncHandler(async (req, res) => {
   res.json(filteredUsers);
 });
 
+// @desc    Change username
+// @route   PUT /api/users/username
+// @access  Private
+const changeUsername = asyncHandler(async (req, res) => {
+  const { username } = req.body;
+  if (!username) {
+    res.status(400);
+    throw new Error('Please provide a new username');
+  }
+
+  const user = await userService.changeUsername(req.user._id, username);
+  res.json({
+    _id: user._id,
+    name: user.name,
+    username: user.username,
+    email: user.email,
+    balance: user.balance,
+  });
+});
+
 module.exports = {
   getUsers,
+  changeUsername,
 };
