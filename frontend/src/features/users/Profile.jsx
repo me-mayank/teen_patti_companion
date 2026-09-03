@@ -55,7 +55,7 @@ const Profile = () => {
                 <Wallet className="w-24 h-24" />
               </div>
               <div className="relative z-10">
-                <p className="text-emerald-100 font-medium mb-1">Global Wallet Balance</p>
+                <p className="text-emerald-100 font-medium mb-1">Wallet Balance</p>
                 <div className="flex items-baseline gap-2">
                   <span className="text-4xl font-bold text-white">
                     ₹{profileData?.globalBalance?.toLocaleString() || 0}

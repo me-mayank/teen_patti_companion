@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import * as gamesApi from './games.api';
 import * as invitationsApi from '../invitations/invitations.api';
-import { Plus, Play, History, Bell, LogOut, Loader2, Check, X, UserCircle } from 'lucide-react';
+import { Plus, Play, History, Bell, LogOut, Loader2, Check, X, UserCircle, Info, Download } from 'lucide-react';
 import logo from '../../assets/logo.png';
 
 const Home = () => {
@@ -14,6 +14,27 @@ const Home = () => {
   const [pendingInvites, setPendingInvites] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('active'); // active or history
+  
+  const [showInfo, setShowInfo] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState(null);
+
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+  }, []);
+
+  const handleInstallClick = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+      setDeferredPrompt(null);
+    }
+  };
 
   const loadData = async () => {
     try {
@@ -74,7 +95,23 @@ const Home = () => {
               <p className="text-xs sm:text-base text-slate-400">Ready to play?</p>
             </div>
           </div>
-          <div className="flex gap-2 shrink-0">
+          <div className="flex flex-wrap gap-2 shrink-0 justify-end">
+            {deferredPrompt && (
+              <button 
+                onClick={handleInstallClick}
+                className="hidden sm:flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold rounded-full transition-all shadow-lg shadow-emerald-500/20"
+                title="Install App"
+              >
+                <Download className="w-4 h-4" /> Install App
+              </button>
+            )}
+            <button 
+              onClick={() => setShowInfo(true)}
+              className="p-2 sm:p-3 bg-slate-900 border border-slate-800 rounded-full text-slate-400 hover:text-white hover:bg-slate-800 transition-all"
+              title="About this App"
+            >
+              <Info className="w-4 h-4 sm:w-5 sm:h-5" />
+            </button>
             <button 
               onClick={() => navigate('/profile')}
               className="p-2 sm:p-3 bg-slate-900 border border-slate-800 rounded-full text-slate-400 hover:text-white hover:bg-slate-800 transition-all"
@@ -91,6 +128,16 @@ const Home = () => {
             </button>
           </div>
         </div>
+
+        {/* Mobile Install Button */}
+        {deferredPrompt && (
+          <button 
+            onClick={handleInstallClick}
+            className="sm:hidden w-full flex justify-center items-center gap-2 mb-6 px-4 py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold rounded-xl transition-all shadow-lg shadow-emerald-500/20"
+          >
+            <Download className="w-5 h-5" /> Install Teen Patti App
+          </button>
+        )}
 
         {/* Invitations Section */}
         {pendingInvites.length > 0 && (
@@ -217,6 +264,43 @@ const Home = () => {
           <Plus className="w-6 h-6" />
         </Link>
       </div>
+
+      {/* Info Modal */}
+      {showInfo && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 md:p-8 max-w-md w-full shadow-2xl relative">
+            <button 
+              onClick={() => setShowInfo(false)}
+              className="absolute top-4 right-4 p-2 text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-full transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <h2 className="text-2xl font-bold text-emerald-400 mb-4 flex items-center gap-2">
+              <Info className="w-6 h-6" /> About this App
+            </h2>
+            <div className="text-slate-300 space-y-4">
+              <p>
+                <strong>Teen Patti Companion</strong> is a premium digital ledger and game manager for your real-world, physical Teen Patti games.
+              </p>
+              <p>
+                Instead of using poker chips or keeping track of money on paper, use this app to automatically track bets, pots, turn orders, side-shows, and end-of-game payouts.
+              </p>
+              <ul className="list-disc pl-5 text-slate-400 space-y-1">
+                <li>Create games and invite friends</li>
+                <li>Set custom boot amounts and bet limits</li>
+                <li>Track global balances seamlessly</li>
+                <li>Install as an app on your phone (PWA)</li>
+              </ul>
+            </div>
+            <button 
+              onClick={() => setShowInfo(false)}
+              className="mt-8 w-full bg-slate-800 hover:bg-slate-700 text-white font-medium py-3 rounded-xl transition-all"
+            >
+              Got it!
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
