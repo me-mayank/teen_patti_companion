@@ -211,35 +211,43 @@ const GameBoard = () => {
         {/* Showdown Overlay */}
         {round?.status === 'SHOW_PENDING' && (
           <div className="absolute inset-0 bg-slate-950/90 backdrop-blur-md z-50 flex flex-col items-center justify-center p-4">
-            <h2 className="text-3xl font-bold text-emerald-400 mb-2">Showdown!</h2>
-            <p className="text-slate-300 mb-8 text-center max-w-md">
-              Please compare the cards. Click on the winner to distribute the pot of ₹{round.potAmount}.
-            </p>
-            <div className="flex gap-4 sm:gap-8 flex-wrap justify-center">
-              {round.players.filter(p => p.status === 'ACTIVE').map(p => (
-                <button
-                  key={p.userId?._id}
-                  onClick={async () => {
-                    setProcessing(true);
-                    try {
-                      await roundApi.submitShowResult(round._id, p.userId?._id);
-                    } catch (err) {
-                      alert(err.response?.data?.message || 'Failed to submit show result');
-                    } finally {
-                      setProcessing(false);
-                    }
-                  }}
-                  disabled={processing}
-                  className="bg-slate-900 border-2 border-emerald-500/30 hover:border-emerald-500 hover:bg-slate-800 p-6 rounded-2xl flex flex-col items-center gap-4 transition-all min-w-[160px] shadow-lg shadow-emerald-500/10"
-                >
-                  <div className="w-20 h-20 rounded-full bg-slate-800 border-2 border-slate-700 flex items-center justify-center text-3xl font-bold text-emerald-100 shadow-inner">
-                    {p.userId?.name?.charAt(0).toUpperCase()}
-                  </div>
-                  <span className="font-bold text-xl text-white">{p.userId?.name}</span>
-                  <span className="text-emerald-400 text-sm font-medium">Winner</span>
-                </button>
-              ))}
-            </div>
+            <h2 className="text-3xl font-bold text-[#D7A656] mb-2">Showdown!</h2>
+            {game?.createdBy?._id === user._id ? (
+              <>
+                <p className="text-slate-300 mb-8 text-center max-w-md">
+                  Please compare the cards. Click on the winner to distribute the pot of ₹{round.potAmount}.
+                </p>
+                <div className="flex gap-4 sm:gap-8 flex-wrap justify-center">
+                  {round.players.filter(p => p.status === 'ACTIVE').map(p => (
+                    <button
+                      key={p.userId?._id}
+                      onClick={async () => {
+                        setProcessing(true);
+                        try {
+                          await roundApi.submitShowResult(round._id, p.userId?._id);
+                        } catch (err) {
+                          alert(err.response?.data?.message || 'Failed to submit show result');
+                        } finally {
+                          setProcessing(false);
+                        }
+                      }}
+                      disabled={processing}
+                      className="bg-[#12100F] border-2 border-[#D7A656]/30 hover:border-[#D7A656] hover:bg-[#1A1714] p-6 rounded-2xl flex flex-col items-center gap-4 transition-all min-w-[160px] shadow-lg shadow-black/50"
+                    >
+                      <div className="w-20 h-20 rounded-full bg-[#070606] border-2 border-[#D7A656]/50 flex items-center justify-center text-3xl font-bold text-white shadow-inner">
+                        {p.userId?.name?.charAt(0).toUpperCase()}
+                      </div>
+                      <span className="font-bold text-xl text-white">{p.userId?.name}</span>
+                      <span className="text-[#D7A656] text-sm font-medium">Select Winner</span>
+                    </button>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <p className="text-slate-400 font-medium bg-[#12100F] px-6 py-4 rounded-xl animate-pulse border border-[#D7A656]/20 mt-4 text-center max-w-md">
+                Comparing cards...<br/>Waiting for creator to declare the winner.
+              </p>
+            )}
           </div>
         )}
 
