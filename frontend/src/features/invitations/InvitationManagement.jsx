@@ -3,12 +3,14 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import * as gamesApi from '../games/games.api';
 import * as invitationsApi from './invitations.api';
 import { useSocket } from '../../shared/hooks/useSocket';
+import { useAuth } from '../auth/AuthContext';
 import { ArrowLeft, Users, Loader2, CheckCircle2, Clock, XCircle, Play, Send } from 'lucide-react';
 
 const InvitationManagement = () => {
   const { id: gameId } = useParams();
   const navigate = useNavigate();
   const socket = useSocket();
+  const { user } = useAuth();
   
   const [game, setGame] = useState(null);
   const [invitations, setInvitations] = useState([]);
@@ -65,6 +67,7 @@ const InvitationManagement = () => {
     );
   }
 
+  const isCreator = game.createdBy?._id === user?._id || game.createdBy === user?._id;
   const acceptedCount = invitations.filter(i => i.status === 'ACCEPTED').length;
 
   const handleFinalize = async () => {
@@ -122,8 +125,9 @@ const InvitationManagement = () => {
           </div>
           <h2 className="text-2xl font-bold mb-2">Waiting for Players</h2>
           <p className="text-slate-400 max-w-md mx-auto">
-            Invitations have been sent. Wait for players to accept before finalizing the game.
-            The list below will update automatically.
+            {isCreator 
+              ? "Invitations have been sent. Wait for players to accept before finalizing the game. The list below will update automatically."
+              : "Waiting for the creator to finalize the players and start the game. The list below will update automatically."}
           </p>
           
           <div className="flex justify-center gap-8 mt-6 py-4 border-t border-slate-800">
@@ -158,7 +162,7 @@ const InvitationManagement = () => {
                   {getStatusIcon(inv.status)}
                   <span className="text-sm font-medium">{inv.status}</span>
                 </div>
-                {inv.status === 'PENDING' && (
+                {isCreator && inv.status === 'PENDING' && (
                   <button
                     onClick={() => handleResend(inv._id)}
                     className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-md transition-colors"
@@ -173,15 +177,21 @@ const InvitationManagement = () => {
         </div>
 
         {/* Phase 3 preview button */}
-        <button
-          disabled={acceptedCount < 1 || finalizing} 
-          onClick={handleFinalize}
-          className="w-full flex justify-center items-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-4 rounded-xl transition-all shadow-lg shadow-emerald-500/20 disabled:opacity-50 disabled:cursor-not-allowed text-lg"
-        >
-          {finalizing ? 'Finalizing...' : (
-            <>Finalize Players <Play className="w-5 h-5" /></>
-          )}
-        </button>
+        {isCreator ? (
+          <button
+            disabled={acceptedCount < 1 || finalizing} 
+            onClick={handleFinalize}
+            className="w-full flex justify-center items-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-4 rounded-xl transition-all shadow-lg shadow-emerald-500/20 disabled:opacity-50 disabled:cursor-not-allowed text-lg"
+          >
+            {finalizing ? 'Finalizing...' : (
+              <>Finalize Players <Play className="w-5 h-5" /></>
+            )}
+          </button>
+        ) : (
+          <div className="w-full flex justify-center items-center gap-2 bg-slate-800 text-slate-400 font-bold py-4 rounded-xl transition-all shadow-lg text-lg">
+            Waiting for Creator to Finalize...
+          </div>
+        )}
 
       </div>
     </div>
