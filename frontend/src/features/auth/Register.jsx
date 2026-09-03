@@ -1,0 +1,110 @@
+import { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { useAuth } from './AuthContext';
+import { Gamepad2, AlertCircle } from 'lucide-react';
+
+const Register = () => {
+  const [name, setName] = useState('');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const { register } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+    try {
+      await register({ name, username, password });
+      navigate('/');
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to register');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
+      {/* Background gradients */}
+      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-emerald-500/20 rounded-full mix-blend-screen filter blur-3xl opacity-30 animate-blob"></div>
+      <div className="absolute top-1/3 left-1/4 w-96 h-96 bg-blue-500/20 rounded-full mix-blend-screen filter blur-3xl opacity-30 animate-blob animation-delay-2000"></div>
+
+      <div className="relative w-full max-w-md">
+        <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 p-8 rounded-3xl shadow-2xl">
+          <div className="flex flex-col items-center mb-8">
+            <div className="w-16 h-16 bg-gradient-to-tr from-emerald-500 to-emerald-300 rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-500/20 mb-4">
+              <Gamepad2 className="w-8 h-8 text-white" />
+            </div>
+            <h1 className="text-3xl font-bold text-white tracking-tight">Join the Game</h1>
+            <p className="text-slate-400 mt-2">Create your player account</p>
+          </div>
+
+          {error && (
+            <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 mb-6 flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+              <p className="text-red-400 text-sm">{error}</p>
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-2">Display Name</label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all"
+                placeholder="e.g. Mayank"
+                required
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-2">Username</label>
+              <input
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                className="w-full bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all"
+                placeholder="Choose a unique username"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-2">Password</label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all"
+                placeholder="At least 6 characters"
+                required
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold py-3.5 rounded-xl transition-all active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed shadow-lg shadow-emerald-500/20 mt-2"
+            >
+              {loading ? 'Creating Account...' : 'Create Account'}
+            </button>
+          </form>
+
+          <p className="text-center text-slate-400 mt-8 text-sm">
+            Already have an account?{' '}
+            <Link to="/login" className="text-emerald-400 hover:text-emerald-300 font-medium transition-colors">
+              Sign in instead
+            </Link>
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default Register;
