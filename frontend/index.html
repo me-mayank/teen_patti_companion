@@ -7,6 +7,13 @@
     <title>Teen Patti Companion</title>
   </head>
   <body>
+    <script>
+      window.globalDeferredPrompt = null;
+      window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        window.globalDeferredPrompt = e;
+      });
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>

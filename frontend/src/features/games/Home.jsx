@@ -34,11 +34,14 @@ const Home = () => {
   }, []);
 
   const handleInstallClick = async () => {
-    if (deferredPrompt) {
-      deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
+    const promptEvent = deferredPrompt || window.globalDeferredPrompt;
+    
+    if (promptEvent) {
+      promptEvent.prompt();
+      const { outcome } = await promptEvent.userChoice;
       if (outcome === 'accepted') {
         setDeferredPrompt(null);
+        window.globalDeferredPrompt = null;
         setIsStandalone(true);
       }
     } else {
