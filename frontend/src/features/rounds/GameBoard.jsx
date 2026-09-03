@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { useSocket } from '../../shared/hooks/useSocket';
 import * as gamesApi from '../games/games.api';
-import * as roundApi from '../round.api';
+import * as roundApi from './round.api';
 import { Loader2, Crown } from 'lucide-react';
 import PlayerCircle from './components/PlayerCircle';
 import PotArea from './components/PotArea';
