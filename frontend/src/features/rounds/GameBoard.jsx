@@ -42,11 +42,21 @@ const GameBoard = () => {
     if (socket) {
       socket.emit('joinGame', gameId);
       
-      socket.on('round:update', fetchGameState);
-      socket.on('game:update', fetchGameState);
-      socket.on('round:completed', () => {
+      socket.on('round:update', (payload) => {
+        if (payload && payload.game) setGame(payload.game);
+        if (payload && payload.round) setRound(payload.round);
+        if (!payload || !payload.game) fetchGameState();
+      });
+      socket.on('game:update', (payload) => {
+        if (payload && payload.game) setGame(payload.game);
+        if (payload && payload.round) setRound(payload.round);
+        if (!payload || !payload.game) fetchGameState();
+      });
+      socket.on('round:completed', (payload) => {
         // Show winner modal or similar, then refresh
-        fetchGameState();
+        if (payload && payload.game) setGame(payload.game);
+        if (payload && payload.round) setRound(payload.round);
+        if (!payload || !payload.game) fetchGameState();
       });
 
       return () => {

@@ -5,9 +5,28 @@ const { recordTransaction } = require('../ledger/ledger.service');
 const turnManager = require('./turnManager.service');
 const { getIO } = require('../../shared/sockets');
 
-const _emitUpdate = (gameId) => {
-  getIO().to(`game:${gameId}`).emit('game:update', { gameId });
-  getIO().to(`game:${gameId}`).emit('round:update', { gameId });
+const _emitUpdate = async (gameId) => {
+  try {
+    const game = await Game.findById(gameId)
+      .populate('createdBy', 'name username profilePicture')
+      .populate('participants.userId', 'name username profilePicture')
+      .populate('turnOrder', 'name username profilePicture');
+
+    let round = null;
+    if (game && game.currentRoundNumber > 0) {
+      round = await Round.findOne({ gameId, roundNumber: game.currentRoundNumber })
+        .populate('players.userId', 'name username profilePicture')
+        .populate('winnerId', 'name username profilePicture');
+    }
+
+    const payload = { gameId, game, round };
+    getIO().to(`game:${gameId}`).emit('game:update', payload);
+    getIO().to(`game:${gameId}`).emit('round:update', payload);
+  } catch (err) {
+    console.error('Error emitting populated update:', err);
+    getIO().to(`game:${gameId}`).emit('game:update', { gameId });
+    getIO().to(`game:${gameId}`).emit('round:update', { gameId });
+  }
 };
 
 const User = require('../users/user.model');

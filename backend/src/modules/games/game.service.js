@@ -1,5 +1,29 @@
 const mongoose = require('mongoose');
 const Game = require('./game.model');
+const { getIO } = require('../../shared/sockets');
+
+const _emitUpdate = async (gameId) => {
+  try {
+    const game = await Game.findById(gameId)
+      .populate('createdBy', 'name username profilePicture')
+      .populate('participants.userId', 'name username profilePicture')
+      .populate('turnOrder', 'name username profilePicture');
+
+    const Round = require('../rounds/round.model');
+    let round = null;
+    if (game && game.currentRoundNumber > 0) {
+      round = await Round.findOne({ gameId, roundNumber: game.currentRoundNumber })
+        .populate('players.userId', 'name username profilePicture')
+        .populate('winnerId', 'name username profilePicture');
+    }
+
+    const payload = { gameId, game, round };
+    getIO().to(`game:${gameId}`).emit('game:update', payload);
+  } catch (err) {
+    console.error('Error emitting populated game update:', err);
+    getIO().to(`game:${gameId}`).emit('game:update', { gameId });
+  }
+};
 
 const createGame = async (gameData) => {
   const game = await Game.create(gameData);
@@ -66,8 +90,7 @@ const finalizePlayers = async (gameId, userId) => {
   game.status = 'TURN_ORDER_SETUP';
   await game.save();
   
-  const { getIO } = require('../../shared/sockets');
-  getIO().to(`game:${gameId}`).emit('game:update', { gameId });
+  _emitUpdate(gameId);
   
   return game;
 };
@@ -95,8 +118,7 @@ const setTurnOrder = async (gameId, orderedUserIds, userId) => {
   game.turnOrder = orderedUserIds;
   await game.save();
   
-  const { getIO } = require('../../shared/sockets');
-  getIO().to(`game:${gameId}`).emit('game:update', { gameId });
+  _emitUpdate(gameId);
   
   return game;
 };
@@ -121,8 +143,7 @@ const startGame = async (gameId, userId) => {
   game.startedAt = new Date();
   await game.save();
   
-  const { getIO } = require('../../shared/sockets');
-  getIO().to(`game:${gameId}`).emit('game:update', { gameId });
+  _emitUpdate(gameId);
   
   return game;
 };
@@ -175,8 +196,7 @@ const endGame = async (gameId, userId) => {
     session.endSession();
   }
 
-  const { getIO } = require('../../shared/sockets');
-  getIO().to(`game:${gameId}`).emit('game:update', { gameId });
+  _emitUpdate(gameId);
 
   return game;
 };
