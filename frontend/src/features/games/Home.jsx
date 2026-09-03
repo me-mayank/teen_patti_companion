@@ -56,38 +56,38 @@ const Home = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white p-6 md:p-12 relative overflow-hidden">
+    <div className="min-h-screen bg-slate-950 text-white p-4 sm:p-6 md:p-12 relative overflow-hidden">
       {/* Background blobs */}
-      <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-500/10 rounded-full mix-blend-screen filter blur-3xl"></div>
+      <div className="absolute top-0 right-0 w-64 h-64 sm:w-96 sm:h-96 bg-emerald-500/10 rounded-full mix-blend-screen filter blur-3xl overflow-hidden"></div>
       
       <div className="max-w-4xl mx-auto relative z-10">
         {/* Header */}
-        <div className="flex justify-between items-center mb-12">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl overflow-hidden shadow-lg shadow-emerald-500/20 border border-emerald-500/30">
+        <div className="flex justify-between items-start sm:items-center mb-8 sm:mb-12">
+          <div className="flex items-center gap-3 sm:gap-4">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 shrink-0 rounded-xl overflow-hidden shadow-lg shadow-emerald-500/20 border border-emerald-500/30">
               <img src={logo} alt="Teen Patti Logo" className="w-full h-full object-cover" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-emerald-200">
-                Hello, {user.name}
+              <h1 className="text-xl sm:text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-emerald-200 truncate max-w-[160px] sm:max-w-none">
+                Hello, {user.name.split(' ')[0]}
               </h1>
-              <p className="text-slate-400">Ready to play Teen Patti?</p>
+              <p className="text-xs sm:text-base text-slate-400">Ready to play?</p>
             </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 shrink-0">
             <button 
               onClick={() => navigate('/profile')}
-              className="p-3 bg-slate-900 border border-slate-800 rounded-full text-slate-400 hover:text-white hover:bg-slate-800 transition-all"
+              className="p-2 sm:p-3 bg-slate-900 border border-slate-800 rounded-full text-slate-400 hover:text-white hover:bg-slate-800 transition-all"
               title="Profile"
             >
-              <UserCircle className="w-5 h-5" />
+              <UserCircle className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
             <button 
               onClick={logout}
-              className="p-3 bg-slate-900 border border-slate-800 rounded-full text-slate-400 hover:text-white hover:bg-slate-800 transition-all"
+              className="p-2 sm:p-3 bg-slate-900 border border-slate-800 rounded-full text-slate-400 hover:text-white hover:bg-slate-800 transition-all"
               title="Sign out"
             >
-              <LogOut className="w-5 h-5" />
+              <LogOut className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
           </div>
         </div>

@@ -210,16 +210,14 @@ const GameBoard = () => {
           </div>
         )}
 
-        <div className="relative w-full max-w-4xl aspect-square md:aspect-video flex items-center justify-center mb-8">
+        <div className="relative w-full max-w-4xl aspect-square md:aspect-video flex items-center justify-center mb-4 sm:mb-8 mt-4 sm:mt-0">
           
           {/* Central Pot Area */}
           <PotArea potAmount={round?.potAmount || 0} currentBet={round?.currentBet || game?.bootAmount || 0} />
 
           {/* Players Circular Layout Placeholder (Absolute positioning based on turn order) */}
-          {/* For simplicity in this text-based IDE, I'll just render them in a row or grid around the pot */}
           <div className="absolute inset-0 pointer-events-none">
-            {/* Logic for positioning players around the circle goes here. */}
-            <div className="w-full h-full flex flex-wrap items-center justify-around p-8">
+            <div className="w-full h-full flex flex-wrap items-center justify-around p-2 sm:p-8">
               {round?.players.map((p, i) => {
                 const gameParticipant = game?.participants.find(gp => gp.userId._id === p.userId._id);
                 const playerWithBalance = {

@@ -83,18 +83,20 @@ const GameHistory = () => {
           <div className="md:col-span-1">
             <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 sticky top-8">
               <h2 className="text-lg font-semibold mb-4 text-emerald-400">Final Balances</h2>
-              <div className="space-y-4">
-                {summary?.balances.map(b => (
-                  <div key={b.user._id} className="flex justify-between items-center p-3 bg-slate-950 rounded-xl border border-slate-800">
-                    <div>
-                      <p className="font-medium text-slate-200">{b.user.name}</p>
-                      <p className="text-xs text-slate-500">@{b.user.username}</p>
+              <div className="overflow-x-auto">
+                <div className="space-y-4 min-w-[200px]">
+                  {summary?.balances.map(b => (
+                    <div key={b.user._id} className="flex justify-between items-center p-3 bg-slate-950 rounded-xl border border-slate-800">
+                      <div>
+                        <p className="font-medium text-slate-200">{b.user.name}</p>
+                        <p className="text-xs text-slate-500">@{b.user.username}</p>
+                      </div>
+                      <span className={`font-bold ${b.balance >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                        {b.balance >= 0 ? '+' : ''}₹{b.balance.toFixed(2)}
+                      </span>
                     </div>
-                    <span className={`font-bold ${b.balance >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                      {b.balance >= 0 ? '+' : ''}₹{b.balance.toFixed(2)}
-                    </span>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             </div>
           </div>
