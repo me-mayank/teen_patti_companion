@@ -330,6 +330,16 @@ const GameBoard = () => {
         {round?.status === 'COMPLETED' && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-950/80 backdrop-blur-md z-50 p-4">
              <Crown className="text-yellow-400 w-20 h-20 mb-4 drop-shadow-[0_0_15px_rgba(250,204,21,0.5)]" />
+             
+             {/* Winner Avatar */}
+             <div className="w-24 h-24 sm:w-32 sm:h-32 mb-4 rounded-full bg-[#12100F] border-4 border-[#D7A656] shadow-[0_0_30px_rgba(215,166,86,0.6)] flex items-center justify-center text-4xl sm:text-5xl font-bold text-white overflow-hidden">
+               {round.winnerId?.profilePicture ? (
+                 <img src={round.winnerId.profilePicture} alt="Winner" className="w-full h-full object-cover" />
+               ) : (
+                 round.winnerId?.name?.charAt(0).toUpperCase() || '?'
+               )}
+             </div>
+
              <h2 className="text-4xl font-bold text-emerald-400 mb-2 text-center">{round.winnerId?.name || 'Someone'} Won!</h2>
              <p className="text-2xl text-white font-medium mb-12">Total Pot: ₹{round.potAmount}</p>
 
