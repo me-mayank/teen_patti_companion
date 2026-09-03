@@ -330,19 +330,46 @@ const submitSideShowResult = async (roundId, userId, loserUserId) => {
 };
 
 const requestShow = async (roundId, userId) => {
-  const round = await Round.findById(roundId);
-  const game = await Game.findById(round.gameId);
-  _validateAction(round, game, userId);
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  try {
+    const round = await Round.findById(roundId).session(session);
+    if (!round) throw new Error('Round not found');
+    const game = await Game.findById(round.gameId).session(session);
 
-  const activePlayers = round.players.filter(p => p.status === 'ACTIVE');
-  if (activePlayers.length !== 2) {
-    throw new Error('Show can only be requested when exactly 2 active players remain');
+    const currentPlayer = _validateAction(round, game, userId);
+
+    const activePlayers = round.players.filter(p => p.status === 'ACTIVE');
+    if (activePlayers.length !== 2) {
+      throw new Error('Show can only be requested when exactly 2 active players remain');
+    }
+
+    const betAmount = round.currentBet;
+    round.potAmount += betAmount;
+    currentPlayer.totalContribution += betAmount;
+
+    await recordTransaction(session, {
+      userId,
+      gameId: game._id,
+      roundId: round._id,
+      type: 'SHOW_FEE',
+      amount: -betAmount,
+      description: `Paid ₹${betAmount} for Show`
+    });
+
+    round.status = 'SHOW_PENDING';
+    await round.save({ session });
+    
+    await session.commitTransaction();
+    session.endSession();
+    
+    _emitUpdate(game._id);
+    return round;
+  } catch (err) {
+    await session.abortTransaction();
+    session.endSession();
+    throw err;
   }
-
-  round.status = 'SHOW_PENDING';
-  await round.save();
-  _emitUpdate(game._id);
-  return round;
 };
 
 const submitShowResult = async (roundId, userId, winnerUserId) => {
