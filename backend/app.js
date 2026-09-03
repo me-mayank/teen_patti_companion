@@ -16,6 +16,11 @@ app.use(cors());
 app.use(express.json());
 app.use(morgan('dev'));
 
+// Root Route
+app.get('/', (req, res) => {
+  res.status(200).send('Teen Patti Companion API is running');
+});
+
 // Health Check Route
 app.get('/api/health', (req, res) => {
   res.status(200).json({ status: 'ok', timestamp: new Date() });
