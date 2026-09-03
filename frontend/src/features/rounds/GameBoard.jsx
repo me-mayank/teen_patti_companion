@@ -281,11 +281,49 @@ const GameBoard = () => {
 
         <div className="relative w-full max-w-[500px] mx-auto aspect-square flex items-center justify-center mb-4 mt-4 sm:mt-8">
           
+          {/* SVG Table Background */}
+          {round?.players && (
+            <svg className="absolute inset-0 w-full h-full pointer-events-none z-0" viewBox="0 0 100 100">
+              {/* Outer ring */}
+              <circle cx="50" cy="50" r="48" fill="none" stroke="#D7A656" strokeWidth="0.2" opacity="0.6" />
+              
+              {/* Inner Pot ring */}
+              <circle cx="50" cy="50" r="22" fill="none" stroke="#D7A656" strokeWidth="0.4" opacity="0.6" />
+              
+              {/* Radiating lines & Badges */}
+              {round.players.map((_, i) => {
+                const totalPlayers = round.players.length;
+                const playerAngle = (i / totalPlayers) * 2 * Math.PI - Math.PI / 2;
+                const lineAngle = playerAngle + (Math.PI / totalPlayers);
+                
+                const lineX1 = 50 + 22 * Math.cos(lineAngle);
+                const lineY1 = 50 + 22 * Math.sin(lineAngle);
+                const lineX2 = 50 + 48 * Math.cos(lineAngle);
+                const lineY2 = 50 + 48 * Math.sin(lineAngle);
+                
+                const badgeX = 50 + 48 * Math.cos(playerAngle);
+                const badgeY = 50 + 48 * Math.sin(playerAngle);
+
+                return (
+                  <g key={`slice-${i}`}>
+                    <line x1={lineX1} y1={lineY1} x2={lineX2} y2={lineY2} stroke="#D7A656" strokeWidth="0.2" opacity="0.6" />
+                    
+                    {/* Badge Group */}
+                    <circle cx={badgeX} cy={badgeY} r="2.5" fill="#070606" stroke="#D7A656" strokeWidth="0.3" />
+                    <text x={badgeX} y={badgeY} fill="#D7A656" fontSize="2.5" fontWeight="bold" textAnchor="middle" dominantBaseline="central">
+                      {i + 1}
+                    </text>
+                  </g>
+                );
+              })}
+            </svg>
+          )}
+
           {/* Central Pot Area */}
           <PotArea potAmount={round?.potAmount || 0} currentBet={round?.currentBet || game?.bootAmount || 0} />
 
           {/* Players Circular Layout */}
-          <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute inset-0 pointer-events-none z-10">
             {round?.players?.map((p, i) => {
               const gameParticipant = game?.participants?.find(gp => gp.userId?._id === p.userId?._id);
               const playerWithBalance = {
@@ -297,7 +335,7 @@ const GameBoard = () => {
               const totalPlayers = round.players.length;
               // Arrange them sequentially around the circle starting from top
               const angle = (i / totalPlayers) * 2 * Math.PI - Math.PI / 2;
-              const radius = 45; // 45% of container width/height
+              const radius = 35; // 35% to keep players inside the outer ring
               const left = 50 + radius * Math.cos(angle);
               const top = 50 + radius * Math.sin(angle);
               
