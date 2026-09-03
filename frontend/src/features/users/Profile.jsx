@@ -12,6 +12,7 @@ const Profile = () => {
   const [loading, setLoading] = useState(true);
   
   const [showEditUsername, setShowEditUsername] = useState(false);
+  const [showDepositInfo, setShowDepositInfo] = useState(false);
   const [newUsername, setNewUsername] = useState('');
   const [editing, setEditing] = useState(false);
 
@@ -71,8 +72,8 @@ const Profile = () => {
         ) : (
           <div className="space-y-6">
             {/* Global Wallet Card */}
-            <div className="bg-gradient-to-br from-emerald-500 to-emerald-700 rounded-3xl p-6 shadow-xl shadow-emerald-900/20 relative overflow-hidden">
-              <div className="absolute top-0 right-0 p-4 opacity-20">
+            <div className="bg-gradient-to-br from-emerald-500 to-emerald-700 rounded-3xl p-6 shadow-xl shadow-emerald-900/20 relative overflow-hidden flex justify-between items-center">
+              <div className="absolute top-0 right-0 p-4 opacity-20 pointer-events-none">
                 <Wallet className="w-24 h-24" />
               </div>
               <div className="relative z-10">
@@ -85,6 +86,14 @@ const Profile = () => {
                 <p className="text-sm text-emerald-100/80 mt-2">
                   Use this balance to buy into games.
                 </p>
+              </div>
+              <div className="relative z-10">
+                <button 
+                  onClick={() => setShowDepositInfo(true)}
+                  className="bg-white/20 hover:bg-white/30 text-white font-bold px-4 py-2 rounded-xl backdrop-blur-sm transition-all shadow-lg"
+                >
+                  Deposit
+                </button>
               </div>
             </div>
 
@@ -151,6 +160,39 @@ const Profile = () => {
                 {editing ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Pay ₹1000 & Change'}
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Deposit Info Modal */}
+      {showDepositInfo && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 md:p-8 max-w-md w-full shadow-2xl relative">
+            <button 
+              onClick={() => setShowDepositInfo(false)}
+              className="absolute top-4 right-4 p-2 text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-full transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <h2 className="text-2xl font-bold text-emerald-400 mb-4 flex items-center gap-2">
+              <Wallet className="w-6 h-6" /> Deposit Money
+            </h2>
+            <div className="text-slate-300 space-y-4 mb-8">
+              <p className="text-lg">
+                <strong>1 RS in Wallet = 1 INR</strong>
+              </p>
+              <p className="text-sm text-slate-400">
+                To deposit money into your wallet, please message our support team on WhatsApp.
+              </p>
+            </div>
+            <a 
+              href="https://wa.me/917376647583?text=Hi%20I%20want%20to%20deposit%20money%20in%20my%20Teen%20Patti%20Wallet"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full bg-[#25D366] hover:bg-[#128C7E] text-white font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2"
+            >
+              Message on WhatsApp
+            </a>
           </div>
         </div>
       )}
