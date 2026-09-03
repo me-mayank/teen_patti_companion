@@ -101,6 +101,17 @@ const GameBoard = () => {
     }
   };
 
+  const handleStartRound = async () => {
+    setProcessing(true);
+    try {
+      await roundApi.startRound(gameId);
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to start round');
+    } finally {
+      setProcessing(false);
+    }
+  };
+
   const handleEndGame = async () => {
     if (!window.confirm("Are you sure you want to end this game?")) return;
     setProcessing(true);
