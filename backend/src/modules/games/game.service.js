@@ -11,7 +11,7 @@ const getActiveGamesForUser = async (userId) => {
     $or: [{ createdBy: userId }, { 'participants.userId': userId }],
     status: { $nin: ['ENDED', 'ARCHIVED'] },
   })
-    .populate('createdBy', 'name username')
+    .populate('createdBy', 'name username profilePicture')
     .sort('-createdAt');
 };
 
@@ -20,15 +20,15 @@ const getGameHistoryForUser = async (userId) => {
     $or: [{ createdBy: userId }, { 'participants.userId': userId }],
     status: { $in: ['ENDED', 'ARCHIVED'] },
   })
-    .populate('createdBy', 'name username')
+    .populate('createdBy', 'name username profilePicture')
     .sort('-createdAt');
 };
 
 const getGameById = async (gameId) => {
   const game = await Game.findById(gameId)
-    .populate('createdBy', 'name username')
-    .populate('participants.userId', 'name username')
-    .populate('turnOrder', 'name username');
+    .populate('createdBy', 'name username profilePicture')
+    .populate('participants.userId', 'name username profilePicture')
+    .populate('turnOrder', 'name username profilePicture');
 
   if (!game) {
     throw new Error('Game not found');
@@ -45,8 +45,8 @@ const getCurrentRoundForGame = async (gameId) => {
 
   const Round = require('../rounds/round.model');
   const round = await Round.findOne({ gameId, roundNumber: game.currentRoundNumber })
-    .populate('players.userId', 'name username')
-    .populate('winnerId', 'name username');
+    .populate('players.userId', 'name username profilePicture')
+    .populate('winnerId', 'name username profilePicture');
     
   return round;
 };

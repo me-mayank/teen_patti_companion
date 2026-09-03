@@ -13,7 +13,9 @@ const Profile = () => {
   
   const [showEditUsername, setShowEditUsername] = useState(false);
   const [showDepositInfo, setShowDepositInfo] = useState(false);
+  const [showEditPic, setShowEditPic] = useState(false);
   const [newUsername, setNewUsername] = useState('');
+  const [picUrl, setPicUrl] = useState('');
   const [editing, setEditing] = useState(false);
 
   const fetchProfile = async () => {
@@ -41,6 +43,30 @@ const Profile = () => {
       setNewUsername('');
     } catch (err) {
       alert(err.response?.data?.message || 'Failed to change username');
+    } finally {
+      setEditing(false);
+    }
+  };
+
+  const convertGDriveLink = (link) => {
+    const match = link.match(/\/d\/([a-zA-Z0-9_-]+)/);
+    if (match && match[1]) {
+      return `https://lh3.googleusercontent.com/d/${match[1]}`;
+    }
+    return link;
+  };
+
+  const handleUpdatePic = async (e) => {
+    e.preventDefault();
+    setEditing(true);
+    try {
+      const convertedUrl = convertGDriveLink(picUrl);
+      await usersApi.updateProfilePicture(convertedUrl);
+      await fetchProfile();
+      setShowEditPic(false);
+      setPicUrl('');
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to update profile picture');
     } finally {
       setEditing(false);
     }
@@ -99,10 +125,26 @@ const Profile = () => {
 
             {/* User Details */}
             <div className="bg-slate-900/50 rounded-3xl border border-slate-800 overflow-hidden">
-              <div className="p-4 border-b border-slate-800/50 flex items-center gap-3">
-                <User className="text-emerald-400 w-5 h-5" />
-                <span className="text-slate-400 font-medium text-sm">Display Name</span>
-                <span className="text-white ml-auto">{profileData?.name}</span>
+              <div className="p-6 border-b border-slate-800/50 flex flex-col sm:flex-row items-center gap-6">
+                <div className="relative group">
+                  {profileData?.profilePicture ? (
+                    <img src={profileData.profilePicture} alt="Profile" className="w-24 h-24 rounded-full object-cover border-4 border-emerald-500/30" />
+                  ) : (
+                    <div className="w-24 h-24 rounded-full bg-slate-800 border-4 border-emerald-500/30 flex items-center justify-center text-3xl font-bold text-emerald-400">
+                      {profileData?.name?.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                  <button 
+                    onClick={() => setShowEditPic(true)}
+                    className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <Edit2 className="w-6 h-6 text-white" />
+                  </button>
+                </div>
+                <div className="flex-1 text-center sm:text-left">
+                  <h2 className="text-2xl font-bold text-white">{profileData?.name}</h2>
+                  <p className="text-slate-400">@{profileData?.username}</p>
+                </div>
               </div>
               <div className="p-4 border-b border-slate-800/50 flex items-center gap-3">
                 <Shield className="text-emerald-400 w-5 h-5" />
@@ -158,6 +200,43 @@ const Profile = () => {
                 className="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50"
               >
                 {editing ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Pay ₹1000 & Change'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Profile Picture Modal */}
+      {showEditPic && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 md:p-8 max-w-md w-full shadow-2xl relative">
+            <button 
+              onClick={() => setShowEditPic(false)}
+              className="absolute top-4 right-4 p-2 text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-full transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <h2 className="text-2xl font-bold text-emerald-400 mb-2">
+              Update Profile Picture
+            </h2>
+            <p className="text-slate-400 text-sm mb-6">
+              Upload your image to Google Drive, make it public ("Anyone with the link can view"), and paste the link below.
+            </p>
+            <form onSubmit={handleUpdatePic}>
+              <input
+                type="url"
+                value={picUrl}
+                onChange={(e) => setPicUrl(e.target.value)}
+                placeholder="Paste Google Drive Link here"
+                required
+                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 mb-6 focus:outline-none focus:border-emerald-500 text-white"
+              />
+              <button
+                type="submit"
+                disabled={editing || !picUrl}
+                className="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {editing ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Update Picture'}
               </button>
             </form>
           </div>

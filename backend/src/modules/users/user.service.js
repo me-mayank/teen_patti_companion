@@ -57,7 +57,17 @@ const changeUsername = async (userId, newUsername) => {
   }
 };
 
+const updateProfilePicture = async (userId, profilePictureUrl) => {
+  const user = await User.findById(userId);
+  if (!user) throw new Error('User not found');
+  
+  user.profilePicture = profilePictureUrl;
+  await user.save();
+  return user;
+};
+
 module.exports = {
   searchUsers,
   changeUsername,
+  updateProfilePicture,
 };

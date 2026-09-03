@@ -24,6 +24,10 @@ const userSchema = new mongoose.Schema(
       type: Number,
       default: 100000,
     },
+    profilePicture: {
+      type: String,
+      default: '',
+    },
     passwordHash: {
       type: String,
       required: true,

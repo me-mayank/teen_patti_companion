@@ -447,8 +447,8 @@ const submitShowResult = async (roundId, userId, winnerUserId) => {
 
 const getRoundById = async (roundId) => {
   return await Round.findById(roundId)
-    .populate('players.userId', 'name username')
-    .populate('winnerId', 'name username');
+    .populate('players.userId', 'name username profilePicture')
+    .populate('winnerId', 'name username profilePicture');
 };
 
 module.exports = {

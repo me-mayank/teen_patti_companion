@@ -7,13 +7,17 @@ const PlayerCircle = ({ player, isCurrentTurn, isMe }) => {
     <div className={`relative flex flex-col items-center transition-all ${isPacked ? 'opacity-50 grayscale' : ''}`}>
       
       {/* Player Avatar */}
-      <div className={`relative w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center text-xl sm:text-2xl font-bold mb-1 sm:mb-2 transition-all
+      <div className={`relative w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center text-xl sm:text-2xl font-bold mb-1 sm:mb-2 transition-all overflow-hidden
         ${isCurrentTurn 
           ? 'bg-[#12100F] border-[3px] border-[#D7A656] shadow-[0_0_25px_rgba(215,166,86,0.6)] text-white ring-2 ring-[#D7A656]/50 ring-offset-2 ring-offset-transparent' 
           : 'bg-[#12100F] border-2 border-[#D7A656]/40 shadow-lg shadow-black/50 text-white hover:border-[#D7A656]/70'
         }`}
       >
-        {player.userId?.name?.charAt(0).toUpperCase()}
+        {player.userId?.profilePicture ? (
+          <img src={player.userId.profilePicture} alt="Profile" className="w-full h-full object-cover" />
+        ) : (
+          player.userId?.name?.charAt(0).toUpperCase()
+        )}
       </div>
       
       <div className="text-center bg-[#070606]/95 px-3 py-1 rounded-xl backdrop-blur-md shadow-xl border border-[#D7A656]/20">

@@ -30,10 +30,29 @@ const changeUsername = asyncHandler(async (req, res) => {
     username: user.username,
     email: user.email,
     balance: user.balance,
+    profilePicture: user.profilePicture,
+  });
+});
+
+// @desc    Update profile picture
+// @route   PUT /api/users/profile-picture
+// @access  Private
+const updateProfilePicture = asyncHandler(async (req, res) => {
+  const { profilePicture } = req.body;
+  
+  const user = await userService.updateProfilePicture(req.user._id, profilePicture);
+  res.json({
+    _id: user._id,
+    name: user.name,
+    username: user.username,
+    email: user.email,
+    balance: user.balance,
+    profilePicture: user.profilePicture,
   });
 });
 
 module.exports = {
   getUsers,
   changeUsername,
+  updateProfilePicture,
 };

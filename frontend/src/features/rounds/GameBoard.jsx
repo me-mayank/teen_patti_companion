@@ -255,8 +255,12 @@ const GameBoard = () => {
                            disabled={processing}
                            className="bg-[#12100F] border-2 border-red-500/30 hover:border-red-500 hover:bg-[#1A1714] p-6 rounded-2xl flex flex-col items-center gap-4 transition-all min-w-[160px] shadow-lg shadow-black/50"
                          >
-                           <div className="w-20 h-20 rounded-full bg-[#070606] border-2 border-red-500/50 flex items-center justify-center text-3xl font-bold text-white shadow-inner">
-                             {p.userId?.name?.charAt(0).toUpperCase()}
+                           <div className="w-20 h-20 rounded-full bg-[#070606] border-2 border-red-500/50 flex items-center justify-center text-3xl font-bold text-white shadow-inner overflow-hidden">
+                             {p.userId?.profilePicture ? (
+                               <img src={p.userId.profilePicture} alt="Profile" className="w-full h-full object-cover" />
+                             ) : (
+                               p.userId?.name?.charAt(0).toUpperCase()
+                             )}
                            </div>
                            <span className="font-bold text-xl text-white">{p.userId?.name}</span>
                            <span className="text-red-500 text-sm font-medium">Select as Loser</span>
@@ -301,8 +305,12 @@ const GameBoard = () => {
                       disabled={processing}
                       className="bg-[#12100F] border-2 border-[#D7A656]/30 hover:border-[#D7A656] hover:bg-[#1A1714] p-6 rounded-2xl flex flex-col items-center gap-4 transition-all min-w-[160px] shadow-lg shadow-black/50"
                     >
-                      <div className="w-20 h-20 rounded-full bg-[#070606] border-2 border-[#D7A656]/50 flex items-center justify-center text-3xl font-bold text-white shadow-inner">
-                        {p.userId?.name?.charAt(0).toUpperCase()}
+                      <div className="w-20 h-20 rounded-full bg-[#070606] border-2 border-[#D7A656]/50 flex items-center justify-center text-3xl font-bold text-white shadow-inner overflow-hidden">
+                        {p.userId?.profilePicture ? (
+                          <img src={p.userId.profilePicture} alt="Profile" className="w-full h-full object-cover" />
+                        ) : (
+                          p.userId?.name?.charAt(0).toUpperCase()
+                        )}
                       </div>
                       <span className="font-bold text-xl text-white">{p.userId?.name}</span>
                       <span className="text-[#D7A656] text-sm font-medium">Select Winner</span>
