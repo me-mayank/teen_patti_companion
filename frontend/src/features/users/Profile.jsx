@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
-import { ArrowLeft, User, Mail, Wallet, Shield, Edit2, Loader2, X } from 'lucide-react';
+import { ArrowLeft, User, Mail, Wallet, Shield, Edit2, Loader2, X, LogOut } from 'lucide-react';
 import axiosClient from '../../shared/api/axiosClient';
 import * as usersApi from './users.api';
 
 const Profile = () => {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [profileData, setProfileData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -163,6 +163,14 @@ const Profile = () => {
                 <span className="text-white ml-auto truncate max-w-[200px] sm:max-w-none">{profileData?.email}</span>
               </div>
             </div>
+
+            {/* Logout Button */}
+            <button 
+              onClick={logout}
+              className="w-full mt-6 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 font-bold py-4 rounded-2xl transition-all flex items-center justify-center gap-2"
+            >
+              <LogOut className="w-5 h-5" /> Sign Out
+            </button>
           </div>
         )}
       </div>
