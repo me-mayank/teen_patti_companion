@@ -243,6 +243,29 @@ const GameBoard = () => {
           </div>
         )}
 
+        {/* Round Completed Overlay */}
+        {round?.status === 'COMPLETED' && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-950/80 backdrop-blur-md z-50 p-4">
+             <Crown className="text-yellow-400 w-20 h-20 mb-4 drop-shadow-[0_0_15px_rgba(250,204,21,0.5)]" />
+             <h2 className="text-4xl font-bold text-emerald-400 mb-2 text-center">{round.winnerId?.name || 'Someone'} Won!</h2>
+             <p className="text-2xl text-white font-medium mb-12">Total Pot: ₹{round.potAmount}</p>
+
+             {game?.createdBy?._id === user._id ? (
+               <button 
+                 onClick={handleStartRound}
+                 disabled={processing}
+                 className="bg-emerald-500 text-slate-950 font-bold px-10 py-4 rounded-xl shadow-[0_0_30px_rgba(16,185,129,0.3)] hover:bg-emerald-400 hover:scale-105 transition-all flex items-center gap-2 text-lg"
+               >
+                 {processing ? <Loader2 className="w-6 h-6 animate-spin" /> : 'Start Next Round'}
+               </button>
+             ) : (
+               <p className="text-slate-400 font-medium bg-slate-900 px-6 py-3 rounded-full animate-pulse border border-slate-800">
+                 Waiting for creator to start next round...
+               </p>
+             )}
+          </div>
+        )}
+
         {/* Placeholder for when no round is active */}
         {!round && game?.currentRoundNumber === 0 && game?.createdBy?._id === user._id && (
           <div className="absolute inset-0 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm z-50">
@@ -289,16 +312,18 @@ const GameBoard = () => {
         </div>
 
         {/* Action Panel */}
-        <div className="w-full max-w-4xl mx-auto mt-auto relative z-20">
-          <ActionPanel 
-            isMyTurn={isMyTurn}
-            isProcessing={processing}
-            currentBet={round?.currentBet || game?.bootAmount || 0}
-            maxBetLimit={game?.bootAmount * (game?.maxBetMultiplier || 5)}
-            activePlayersCount={activePlayersCount}
-            onAction={handleAction}
-          />
-        </div>
+        {round?.status === 'ACTIVE' && (
+          <div className="w-full max-w-4xl mx-auto mt-auto relative z-20">
+            <ActionPanel 
+              isMyTurn={isMyTurn}
+              isProcessing={processing}
+              currentBet={round?.currentBet || game?.bootAmount || 0}
+              maxBetLimit={game?.bootAmount * (game?.maxBetMultiplier || 5)}
+              activePlayersCount={activePlayersCount}
+              onAction={handleAction}
+            />
+          </div>
+        )}
       </div>
     </div>
   );
