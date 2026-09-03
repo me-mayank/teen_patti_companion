@@ -167,9 +167,9 @@ const Home = () => {
                   </div>
                   <Link 
                     to={
-                      game.status === 'WAITING' ? `/games/${game._id}/lobby` :
-                      game.status === 'TURN_ORDER_SELECTION' ? `/games/${game._id}/turn-order` :
-                      game.status === 'ENDED' ? `/games/${game._id}/history` :
+                      ['CREATED', 'WAITING_FOR_PLAYERS'].includes(game.status) ? `/games/${game._id}/lobby` :
+                      ['PLAYERS_FINALIZED', 'TURN_ORDER_SETUP'].includes(game.status) ? `/games/${game._id}/turn-order` :
+                      ['ENDED', 'ARCHIVED'].includes(game.status) ? `/games/${game._id}/history` :
                       `/games/${game._id}/board`
                     }
                     className="flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-white px-6 py-3 rounded-xl transition-all"
