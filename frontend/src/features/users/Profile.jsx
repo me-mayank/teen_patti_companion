@@ -72,25 +72,25 @@ const Profile = () => {
         ) : (
           <div className="space-y-6">
             {/* Global Wallet Card */}
-            <div className="bg-gradient-to-br from-emerald-500 to-emerald-700 rounded-3xl p-6 shadow-xl shadow-emerald-900/20 relative overflow-hidden flex justify-between items-center">
-              <div className="absolute top-0 right-0 p-4 opacity-20 pointer-events-none">
-                <Wallet className="w-24 h-24" />
+            <div className="bg-gradient-to-br from-emerald-500 to-emerald-700 rounded-3xl p-6 shadow-xl shadow-emerald-900/20 relative overflow-hidden">
+              <div className="absolute -right-4 -bottom-4 p-4 opacity-20 pointer-events-none">
+                <Wallet className="w-32 h-32" />
               </div>
-              <div className="relative z-10">
-                <p className="text-emerald-100 font-medium mb-1">Wallet Balance</p>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-4xl font-bold text-white">
-                    ₹{profileData?.globalBalance?.toLocaleString() || 0}
-                  </span>
+              <div className="relative z-10 flex flex-col items-start gap-4">
+                <div>
+                  <p className="text-emerald-100 font-medium mb-1">Wallet Balance</p>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-4xl font-bold text-white">
+                      ₹{profileData?.globalBalance?.toLocaleString() || 0}
+                    </span>
+                  </div>
+                  <p className="text-sm text-emerald-100/80 mt-1">
+                    Use this balance to buy into games.
+                  </p>
                 </div>
-                <p className="text-sm text-emerald-100/80 mt-2">
-                  Use this balance to buy into games.
-                </p>
-              </div>
-              <div className="relative z-10">
                 <button 
                   onClick={() => setShowDepositInfo(true)}
-                  className="bg-white/20 hover:bg-white/30 text-white font-bold px-4 py-2 rounded-xl backdrop-blur-sm transition-all shadow-lg"
+                  className="bg-white/20 hover:bg-white/30 text-white font-bold px-6 py-2.5 rounded-xl backdrop-blur-sm transition-all shadow-lg border border-white/10"
                 >
                   Deposit
                 </button>
@@ -179,14 +179,14 @@ const Profile = () => {
             </h2>
             <div className="text-slate-300 space-y-4 mb-8">
               <p className="text-lg">
-                <strong>1 RS in Wallet = 1 INR</strong>
+                <strong>₹ 1 in Wallet = ₹ 1 INR</strong>
               </p>
               <p className="text-sm text-slate-400">
                 To deposit money into your wallet, please message our support team on WhatsApp.
               </p>
             </div>
             <a 
-              href="https://wa.me/917376647583?text=Hi%20I%20want%20to%20deposit%20money%20in%20my%20Teen%20Patti%20Wallet"
+              href="https://wa.me/917376647583?text=Hi%20I%20want%20to%20deposit%20money%20in%20my%20Teen%20Patti%20Companion%20Wallet"
               target="_blank"
               rel="noopener noreferrer"
               className="w-full bg-[#25D366] hover:bg-[#128C7E] text-white font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2"
