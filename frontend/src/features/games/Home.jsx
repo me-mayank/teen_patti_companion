@@ -16,9 +16,15 @@ const Home = () => {
   const [activeTab, setActiveTab] = useState('active'); // active or history
   
   const [showInfo, setShowInfo] = useState(false);
+  const [showManualInstall, setShowManualInstall] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState(null);
+  const [isStandalone, setIsStandalone] = useState(false);
 
   useEffect(() => {
+    if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) {
+      setIsStandalone(true);
+    }
+    
     const handleBeforeInstallPrompt = (e) => {
       e.preventDefault();
       setDeferredPrompt(e);
@@ -28,11 +34,15 @@ const Home = () => {
   }, []);
 
   const handleInstallClick = async () => {
-    if (!deferredPrompt) return;
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    if (outcome === 'accepted') {
-      setDeferredPrompt(null);
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') {
+        setDeferredPrompt(null);
+        setIsStandalone(true);
+      }
+    } else {
+      setShowManualInstall(true);
     }
   };
 
@@ -96,7 +106,7 @@ const Home = () => {
             </div>
           </div>
           <div className="flex flex-wrap gap-2 shrink-0 justify-end">
-            {deferredPrompt && (
+            {!isStandalone && (
               <button 
                 onClick={handleInstallClick}
                 className="hidden sm:flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold rounded-full transition-all shadow-lg shadow-emerald-500/20"
@@ -130,7 +140,7 @@ const Home = () => {
         </div>
 
         {/* Mobile Install Button */}
-        {deferredPrompt && (
+        {!isStandalone && (
           <button 
             onClick={handleInstallClick}
             className="sm:hidden w-full flex justify-center items-center gap-2 mb-6 px-4 py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold rounded-xl transition-all shadow-lg shadow-emerald-500/20"
@@ -297,6 +307,38 @@ const Home = () => {
               className="mt-8 w-full bg-slate-800 hover:bg-slate-700 text-white font-medium py-3 rounded-xl transition-all"
             >
               Got it!
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Manual Install Modal */}
+      {showManualInstall && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 md:p-8 max-w-md w-full shadow-2xl relative">
+            <button 
+              onClick={() => setShowManualInstall(false)}
+              className="absolute top-4 right-4 p-2 text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-full transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <h2 className="text-2xl font-bold text-emerald-400 mb-4 flex items-center gap-2">
+              <Download className="w-6 h-6" /> Install App
+            </h2>
+            <div className="text-slate-300 space-y-4">
+              <p>Your browser requires a manual installation step.</p>
+              <p className="text-sm text-slate-400">
+                <strong>iOS (Safari):</strong> Tap the <strong>Share</strong> icon at the bottom of the screen, scroll down, and tap <strong>"Add to Home Screen"</strong>.
+              </p>
+              <p className="text-sm text-slate-400">
+                <strong>Android / Others:</strong> Tap the <strong>3-dot menu</strong> icon in the top right, and select <strong>"Add to Home screen"</strong> or <strong>"Install app"</strong>.
+              </p>
+            </div>
+            <button 
+              onClick={() => setShowManualInstall(false)}
+              className="mt-8 w-full bg-slate-800 hover:bg-slate-700 text-white font-medium py-3 rounded-xl transition-all"
+            >
+              Okay, I'll do that!
             </button>
           </div>
         </div>
