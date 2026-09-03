@@ -1,11 +1,11 @@
 import { Loader2 } from 'lucide-react';
 
-const ActionPanel = ({ isMyTurn, isProcessing, currentBet, maxBetLimit, activePlayersCount, onAction }) => {
+const ActionPanel = ({ isMyTurn, isProcessing, currentBet, maxBetLimit, activePlayersCount, onAction, currentPlayerName }) => {
   if (!isMyTurn) {
     return (
       <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl flex items-center justify-center min-h-[120px]">
         <p className="text-slate-400 flex items-center gap-2">
-          <Loader2 className="w-5 h-5 animate-spin" /> Waiting for other players...
+          <Loader2 className="w-5 h-5 animate-spin" /> Waiting for {currentPlayerName || 'other players'}...
         </p>
       </div>
     );

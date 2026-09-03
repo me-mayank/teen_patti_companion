@@ -334,6 +334,7 @@ const GameBoard = () => {
               maxBetLimit={game?.bootAmount * (game?.maxBetMultiplier || 5)}
               activePlayersCount={activePlayersCount}
               onAction={handleAction}
+              currentPlayerName={round?.players?.[round?.currentTurnIndex]?.userId?.name}
             />
           </div>
         )}
