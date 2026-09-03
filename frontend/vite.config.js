@@ -12,7 +12,7 @@ export default defineConfig({
       includeAssets: ['favicon.png', 'favicon.svg'],
       manifest: {
         name: 'Teen Patti Companion',
-        short_name: 'Teen Patti',
+        short_name: 'Teen Patti Companion',
         description: 'Premium digital ledger and game manager for Teen Patti',
         theme_color: '#070606',
         background_color: '#070606',

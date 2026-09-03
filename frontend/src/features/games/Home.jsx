@@ -145,7 +145,7 @@ const Home = () => {
             onClick={handleInstallClick}
             className="sm:hidden w-full flex justify-center items-center gap-2 mb-6 px-4 py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold rounded-xl transition-all shadow-lg shadow-emerald-500/20"
           >
-            <Download className="w-5 h-5" /> Install Teen Patti App
+            <Download className="w-5 h-5" /> Install Teen Patti Companion
           </button>
         )}
 
