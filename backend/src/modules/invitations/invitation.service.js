@@ -94,9 +94,28 @@ const getPendingInvitationsForUser = async (userId) => {
     .populate('invitedBy', 'name username');
 };
 
+const resendInvitation = async (invitationId, inviterId) => {
+  const invitation = await Invitation.findById(invitationId).populate('gameId');
+  if (!invitation) throw new Error('Invitation not found');
+  
+  if (invitation.invitedBy.toString() !== inviterId.toString()) {
+    throw new Error('Only the inviter can resend this invitation');
+  }
+
+  if (invitation.status !== 'PENDING') {
+    throw new Error('Cannot resend invitation because it is not pending');
+  }
+
+  invitation.updatedAt = new Date();
+  await invitation.save();
+
+  return invitation;
+};
+
 module.exports = {
   inviteUsers,
   getInvitationsByGameId,
   respondToInvitation,
   getPendingInvitationsForUser,
+  resendInvitation,
 };

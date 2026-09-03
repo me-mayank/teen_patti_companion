@@ -45,9 +45,21 @@ const getMyInvitations = asyncHandler(async (req, res) => {
   res.json(invitations);
 });
 
+// @desc    Resend an invitation
+// @route   POST /api/invitations/:id/resend
+// @access  Private
+const resendInvite = asyncHandler(async (req, res) => {
+  const invitation = await invitationService.resendInvitation(
+    req.params.id,
+    req.user._id
+  );
+  res.json(invitation);
+});
+
 module.exports = {
   invitePlayers,
   getGameInvitations,
   respondInvite,
   getMyInvitations,
+  resendInvite,
 };

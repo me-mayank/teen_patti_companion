@@ -5,6 +5,11 @@ export const invitePlayers = async (gameId, userIds) => {
   return response.data;
 };
 
+export const resendInvite = async (invitationId) => {
+  const response = await axiosClient.post(`/invitations/${invitationId}/resend`);
+  return response.data;
+};
+
 export const getGameInvitations = async (gameId) => {
   const response = await axiosClient.get(`/games/${gameId}/invitations`);
   return response.data;

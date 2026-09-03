@@ -3,6 +3,7 @@ const router = express.Router();
 const {
   respondInvite,
   getMyInvitations,
+  resendInvite,
 } = require('./invitation.controller');
 const { protect } = require('../../shared/middleware/auth.middleware');
 const { validate } = require('../../shared/middleware/validate.middleware');
@@ -16,5 +17,6 @@ const { respondInviteSchema } = require('./invitation.validation');
 
 router.route('/me').get(protect, getMyInvitations);
 router.route('/:id/respond').post(protect, validate(respondInviteSchema), respondInvite);
+router.route('/:id/resend').post(protect, resendInvite);
 
 module.exports = router;

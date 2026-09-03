@@ -3,7 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import * as gamesApi from '../games/games.api';
 import * as invitationsApi from './invitations.api';
 import { useSocket } from '../../shared/hooks/useSocket';
-import { ArrowLeft, Users, Loader2, CheckCircle2, Clock, XCircle, Play } from 'lucide-react';
+import { ArrowLeft, Users, Loader2, CheckCircle2, Clock, XCircle, Play, Send } from 'lucide-react';
 
 const InvitationManagement = () => {
   const { id: gameId } = useParams();
@@ -88,6 +88,15 @@ const InvitationManagement = () => {
     }
   };
 
+  const handleResend = async (invitationId) => {
+    try {
+      await invitationsApi.resendInvite(invitationId);
+      alert('Invitation resent successfully!');
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to resend invitation');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-950 text-white">
       {/* Header */}
@@ -144,9 +153,20 @@ const InvitationManagement = () => {
                 <p className="font-medium text-slate-200">{inv.invitedUserId?.name}</p>
                 <p className="text-xs text-slate-500">@{inv.invitedUserId?.username}</p>
               </div>
-              <div className="flex items-center gap-2 bg-slate-950 px-3 py-1.5 rounded-lg border border-slate-800">
-                {getStatusIcon(inv.status)}
-                <span className="text-sm font-medium">{inv.status}</span>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 bg-slate-950 px-3 py-1.5 rounded-lg border border-slate-800">
+                  {getStatusIcon(inv.status)}
+                  <span className="text-sm font-medium">{inv.status}</span>
+                </div>
+                {inv.status === 'PENDING' && (
+                  <button
+                    onClick={() => handleResend(inv._id)}
+                    className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-md transition-colors"
+                    title="Resend Invitation"
+                  >
+                    <Send className="w-4 h-4" />
+                  </button>
+                )}
               </div>
             </div>
           ))}
