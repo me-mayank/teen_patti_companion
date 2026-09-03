@@ -60,23 +60,25 @@ const GameBoard = () => {
   const handleAction = async (action) => {
     setProcessing(true);
     try {
+      let updatedRound;
       switch (action) {
         case 'BET':
-          await roundApi.bet(round._id);
+          updatedRound = await roundApi.bet(round._id);
           break;
         case 'BET_TWICE':
-          await roundApi.betTwice(round._id);
+          updatedRound = await roundApi.betTwice(round._id);
           break;
         case 'PACK':
-          await roundApi.pack(round._id);
+          updatedRound = await roundApi.pack(round._id);
           break;
         case 'SHOW_REQUEST':
-          await roundApi.requestShow(round._id);
+          updatedRound = await roundApi.requestShow(round._id);
           break;
         case 'SIDE_SHOW_REQUEST':
-          await roundApi.requestSideShow(round._id);
+          updatedRound = await roundApi.requestSideShow(round._id);
           break;
       }
+      if (updatedRound) setRound(updatedRound);
     } catch (err) {
       console.error(err);
       alert(err.response?.data?.message || `Failed to perform ${action}`);
@@ -209,14 +211,14 @@ const GameBoard = () => {
                     <p className="text-xl text-white mb-8">{reqPlayerObj?.userId?.name} wants a Side Show with you.</p>
                     <div className="flex gap-6">
                       <button 
-                        onClick={async () => { setProcessing(true); try { await roundApi.respondSideShow(round._id, true); } catch (e) { alert(e.response?.data?.message || 'Error'); } finally { setProcessing(false); } }}
+                        onClick={async () => { setProcessing(true); try { const updated = await roundApi.respondSideShow(round._id, true); setRound(updated); } catch (e) { alert(e.response?.data?.message || 'Error'); } finally { setProcessing(false); } }}
                         disabled={processing}
                         className="bg-[#D7A656] text-black font-bold px-8 py-3 rounded-xl hover:bg-[#c2954c] transition-all"
                       >
                         Accept
                       </button>
                       <button 
-                        onClick={async () => { setProcessing(true); try { await roundApi.respondSideShow(round._id, false); } catch (e) { alert(e.response?.data?.message || 'Error'); } finally { setProcessing(false); } }}
+                        onClick={async () => { setProcessing(true); try { const updated = await roundApi.respondSideShow(round._id, false); setRound(updated); } catch (e) { alert(e.response?.data?.message || 'Error'); } finally { setProcessing(false); } }}
                         disabled={processing}
                         className="bg-red-950/50 border border-red-500/50 text-red-500 font-bold px-8 py-3 rounded-xl hover:bg-red-900/50 transition-all"
                       >
@@ -246,7 +248,7 @@ const GameBoard = () => {
                            key={p.userId?._id}
                            onClick={async () => {
                              setProcessing(true);
-                             try { await roundApi.submitSideShowResult(round._id, p.userId?._id); }
+                             try { const updated = await roundApi.submitSideShowResult(round._id, p.userId?._id); setRound(updated); }
                              catch (e) { alert(e.response?.data?.message || 'Error'); }
                              finally { setProcessing(false); }
                            }}
@@ -288,7 +290,8 @@ const GameBoard = () => {
                       onClick={async () => {
                         setProcessing(true);
                         try {
-                          await roundApi.submitShowResult(round._id, p.userId?._id);
+                          const updated = await roundApi.submitShowResult(round._id, p.userId?._id);
+                          setRound(updated);
                         } catch (err) {
                           alert(err.response?.data?.message || 'Failed to submit show result');
                         } finally {
