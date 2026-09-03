@@ -37,23 +37,7 @@ const pack = asyncHandler(async (req, res) => {
 // @route   POST /api/rounds/:id/side-show/request
 // @access  Private
 const requestSideShow = asyncHandler(async (req, res) => {
-  const round = await roundService.requestSideShow(req.params.id, req.user._id, req.body.targetUserId);
-  res.json(round);
-});
-
-// @desc    Respond Side Show
-// @route   POST /api/rounds/:id/side-show/respond
-// @access  Private
-const respondSideShow = asyncHandler(async (req, res) => {
-  const round = await roundService.respondSideShow(req.params.id, req.user._id, req.body.accept);
-  res.json(round);
-});
-
-// @desc    Submit Side Show Result
-// @route   POST /api/rounds/:id/side-show/result
-// @access  Private
-const submitSideShowResult = asyncHandler(async (req, res) => {
-  const round = await roundService.submitSideShowResult(req.params.id, req.user._id, req.body.loserUserId);
+  const round = await roundService.requestSideShow(req.params.id, req.user._id);
   res.json(round);
 });
 
@@ -87,8 +71,6 @@ module.exports = {
   betTwice,
   pack,
   requestSideShow,
-  respondSideShow,
-  submitSideShowResult,
   requestShow,
   submitShowResult,
   getRound

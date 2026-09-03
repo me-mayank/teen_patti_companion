@@ -236,90 +236,41 @@ const pack = async (roundId, userId) => {
   }
 };
 
-const requestSideShow = async (roundId, userId, targetUserId) => {
-  const round = await Round.findById(roundId);
-  const game = await Game.findById(round.gameId);
-  _validateAction(round, game, userId);
-
-  const activePlayers = round.players.filter(p => p.status === 'ACTIVE');
-  if (activePlayers.length <= 2) {
-    throw new Error('Side show requires more than 2 active players');
-  }
-
-  // Find previous active player to be the target
-  // In a real game, the previous player is usually the one who bet before you.
-  // For simplicity, verify the target is active.
-  const target = round.players.find(p => p.userId.toString() === targetUserId.toString() && p.status === 'ACTIVE');
-  if (!target) throw new Error('Target player is not active');
-
-  round.status = 'SIDE_SHOW_PENDING';
-  round.sideShowRequest = {
-    requestedBy: userId,
-    targetPlayer: targetUserId,
-    result: 'PENDING'
-  };
-  await round.save();
-  _emitUpdate(game._id);
-  return round;
-};
-
-const respondSideShow = async (roundId, userId, accept) => {
-  const round = await Round.findById(roundId);
-  if (round.status !== 'SIDE_SHOW_PENDING') throw new Error('No side show pending');
-  
-  if (round.sideShowRequest.targetPlayer.toString() !== userId.toString()) {
-    throw new Error('You are not the target of this side show');
-  }
-
-  if (!accept) {
-    // Declined, turn advances
-    round.status = 'ACTIVE';
-    round.sideShowRequest = null;
-    const nextIndex = turnManager.getNextActivePlayerIndex(round.players, round.currentTurnIndex);
-    round.currentTurnIndex = nextIndex;
-    await round.save();
-    _emitUpdate(round.gameId);
-    return round;
-  }
-
-  // Accepted, waiting for result to be posted
-  await round.save();
-  _emitUpdate(round.gameId);
-  return round;
-};
-
-const submitSideShowResult = async (roundId, userId, loserUserId) => {
+const requestSideShow = async (roundId, userId) => {
   const session = await mongoose.startSession();
   session.startTransaction();
   try {
     const round = await Round.findById(roundId).session(session);
-    if (round.status !== 'SIDE_SHOW_PENDING') throw new Error('No side show pending');
-    
-    // Validate users involved
-    const reqBy = round.sideShowRequest.requestedBy.toString();
-    const tgt = round.sideShowRequest.targetPlayer.toString();
-    
-    if (loserUserId !== reqBy && loserUserId !== tgt) {
-      throw new Error('Loser must be one of the players involved in the side show');
+    const game = await Game.findById(round.gameId).session(session);
+    _validateAction(round, game, userId);
+
+    const activePlayers = round.players.filter(p => p.status === 'ACTIVE');
+    if (activePlayers.length <= 2) {
+      throw new Error('Side show requires more than 2 active players');
     }
 
-    const loser = round.players.find(p => p.userId.toString() === loserUserId);
-    loser.status = 'PACKED';
+    const betAmount = round.currentBet;
 
-    round.status = 'ACTIVE';
-    round.sideShowRequest.result = loserUserId === reqBy ? 'TARGET_WON' : 'REQUESTER_WON';
+    // Record side show fee
+    await recordTransaction(session, {
+      userId,
+      gameId: game._id,
+      roundId: round._id,
+      type: 'BET',
+      amount: -betAmount,
+    });
 
-    const winner = turnManager.checkOnePlayerRemaining(round.players);
-    if (winner) {
-      await _completeRound(session, round, winner.userId);
-    } else {
-      const nextIndex = turnManager.getNextActivePlayerIndex(round.players, round.currentTurnIndex);
-      round.currentTurnIndex = nextIndex;
-      await round.save({ session });
-    }
-
+    round.potAmount += betAmount;
+    
+    const nextIndex = turnManager.getNextActivePlayerIndex(round.players, round.currentTurnIndex);
+    if (nextIndex === null) throw new Error('No active players found');
+    
+    round.currentTurnIndex = nextIndex;
+    
+    await round.save({ session });
     await session.commitTransaction();
-    _emitUpdate(round.gameId);
+    
+    _emitUpdate(game._id);
     return round;
   } catch (error) {
     await session.abortTransaction();

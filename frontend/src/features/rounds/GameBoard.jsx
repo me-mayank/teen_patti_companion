@@ -20,9 +20,6 @@ const GameBoard = () => {
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
 
-  // States for special workflows (Side Show / Show)
-  const [pendingTargetSelection, setPendingTargetSelection] = useState(false);
-
   const fetchGameState = useCallback(async () => {
     try {
       const g = await gamesApi.getGameById(gameId);
@@ -77,25 +74,12 @@ const GameBoard = () => {
           await roundApi.requestShow(round._id);
           break;
         case 'SIDE_SHOW_REQUEST':
-          setPendingTargetSelection(true);
-          setProcessing(false);
-          return;
+          await roundApi.requestSideShow(round._id);
+          break;
       }
     } catch (err) {
       console.error(err);
       alert(err.response?.data?.message || `Failed to perform ${action}`);
-    } finally {
-      setProcessing(false);
-    }
-  };
-
-  const handleSideShowTargetSelect = async (targetUserId) => {
-    setPendingTargetSelection(false);
-    setProcessing(true);
-    try {
-      await roundApi.requestSideShow(round._id, targetUserId);
-    } catch (err) {
-      alert(err.response?.data?.message || 'Failed to request side show');
     } finally {
       setProcessing(false);
     }
@@ -361,8 +345,6 @@ const GameBoard = () => {
                     player={playerWithBalance} 
                     isCurrentTurn={round.currentTurnIndex === i} 
                     isMe={p.userId?._id === user._id}
-                    onSideShowTargetSelect={handleSideShowTargetSelect}
-                    pendingSideShow={pendingTargetSelection}
                   />
                 </div>
               );

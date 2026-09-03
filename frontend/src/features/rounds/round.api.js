@@ -25,18 +25,8 @@ export const pack = async (roundId) => {
   return response.data;
 };
 
-export const requestSideShow = async (roundId, targetUserId) => {
-  const response = await axiosClient.post(`/rounds/${roundId}/side-show/request`, { targetUserId });
-  return response.data;
-};
-
-export const respondSideShow = async (roundId, accept) => {
-  const response = await axiosClient.post(`/rounds/${roundId}/side-show/respond`, { accept });
-  return response.data;
-};
-
-export const submitSideShowResult = async (roundId, loserUserId) => {
-  const response = await axiosClient.post(`/rounds/${roundId}/side-show/result`, { loserUserId });
+export const requestSideShow = async (roundId) => {
+  const response = await axiosClient.post(`/rounds/${roundId}/side-show/request`);
   return response.data;
 };
 

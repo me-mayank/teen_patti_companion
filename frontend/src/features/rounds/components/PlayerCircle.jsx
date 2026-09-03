@@ -1,6 +1,6 @@
 import { Shield } from 'lucide-react';
 
-const PlayerCircle = ({ player, isCurrentTurn, isMe, onSideShowTargetSelect, pendingSideShow }) => {
+const PlayerCircle = ({ player, isCurrentTurn, isMe }) => {
   const isPacked = player.status === 'PACKED';
   
   return (
@@ -32,15 +32,7 @@ const PlayerCircle = ({ player, isCurrentTurn, isMe, onSideShowTargetSelect, pen
         </div>
       )}
 
-      {/* Side Show Target Selection Overlay */}
-      {pendingSideShow && !isMe && !isPacked && (
-        <button 
-          onClick={() => onSideShowTargetSelect(player.userId?._id)}
-          className="absolute inset-0 bg-emerald-500/80 rounded-full flex items-center justify-center backdrop-blur-sm text-slate-950 font-bold cursor-pointer hover:bg-emerald-400 transition-all animate-pulse z-20"
-        >
-          Select
-        </button>
-      )}
+
     </div>
   );
 };
