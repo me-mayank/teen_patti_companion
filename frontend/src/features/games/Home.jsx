@@ -166,7 +166,12 @@ const Home = () => {
                     </div>
                   </div>
                   <Link 
-                    to={`/games/${game._id}`}
+                    to={
+                      game.status === 'WAITING' ? `/games/${game._id}/lobby` :
+                      game.status === 'TURN_ORDER_SELECTION' ? `/games/${game._id}/turn-order` :
+                      game.status === 'ENDED' ? `/games/${game._id}/history` :
+                      `/games/${game._id}/board`
+                    }
                     className="flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-white px-6 py-3 rounded-xl transition-all"
                   >
                     Enter Game <Play className="w-4 h-4" />

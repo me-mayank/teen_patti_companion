@@ -125,7 +125,7 @@ const GameBoard = () => {
     }
   };
 
-  const isMyTurn = round && round.players[round.currentTurnIndex]?.userId._id === user._id;
+  const isMyTurn = round && round.players[round.currentTurnIndex]?.userId?._id === user._id;
   const activePlayersCount = round?.players?.filter(p => p.status === 'ACTIVE').length || 0;
 
   if (loading) {
@@ -137,7 +137,7 @@ const GameBoard = () => {
   }
 
   if (game?.status === 'ENDED') {
-    const winner = game.participants?.reduce((prev, current) => (prev.balance > current.balance) ? prev : current);
+    const winner = game.participants?.length > 0 ? game.participants.reduce((prev, current) => (prev.balance > current.balance) ? prev : current) : null;
     
     return (
       <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4">
@@ -230,19 +230,19 @@ const GameBoard = () => {
           <div className="absolute inset-0 pointer-events-none">
             <div className="w-full h-full flex flex-wrap items-center justify-around p-2 sm:p-8">
               {round?.players?.map((p, i) => {
-                const gameParticipant = game?.participants.find(gp => gp.userId._id === p.userId._id);
+                const gameParticipant = game?.participants?.find(gp => gp.userId?._id === p.userId?._id);
                 const playerWithBalance = {
                   ...p,
                   balance: gameParticipant?.balance || 0,
-                  isCreator: game?.createdBy?._id === p.userId._id
+                  isCreator: game?.createdBy?._id === p.userId?._id
                 };
                 
                 return (
-                  <div key={p.userId._id} className="pointer-events-auto">
+                  <div key={p.userId?._id || i} className="pointer-events-auto">
                     <PlayerCircle 
                       player={playerWithBalance} 
                       isCurrentTurn={round.currentTurnIndex === i} 
-                      isMe={p.userId._id === user._id}
+                      isMe={p.userId?._id === user._id}
                       onSideShowTargetSelect={handleSideShowTargetSelect}
                       pendingSideShow={pendingTargetSelection}
                     />
