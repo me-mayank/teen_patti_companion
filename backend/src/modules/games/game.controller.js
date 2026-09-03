@@ -5,6 +5,11 @@ const gameService = require('./game.service');
 // @route   POST /api/games
 // @access  Private
 const createGame = asyncHandler(async (req, res) => {
+  if (req.user.globalBalance < req.body.bootAmount) {
+    res.status(400);
+    throw new Error(`Insufficient wallet balance to create game. Required: ₹${req.body.bootAmount}`);
+  }
+
   const gameData = {
     ...req.body,
     createdBy: req.user._id,

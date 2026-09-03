@@ -72,6 +72,13 @@ const respondToInvitation = async (invitationId, userId, status) => {
     // Add player to game participants
     const game = await Game.findById(invitation.gameId);
     if (game) {
+      const User = require('../users/user.model');
+      const user = await User.findById(userId);
+      
+      if (!user || user.globalBalance < game.bootAmount) {
+        throw new Error(`Insufficient wallet balance to join this game. Required: ₹${game.bootAmount}`);
+      }
+
       const alreadyParticipant = game.participants.some(
         (p) => p.userId.toString() === userId.toString()
       );
