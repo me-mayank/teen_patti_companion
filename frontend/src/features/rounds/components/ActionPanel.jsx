@@ -23,7 +23,7 @@ const ActionPanel = ({ isMyTurn, isProcessing, currentBet, maxBetLimit, activePl
         <button 
           onClick={() => onAction('PACK')} 
           disabled={isProcessing}
-          className="p-3 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl font-medium transition-colors disabled:opacity-50"
+          className="p-3 bg-red-600/20 hover:bg-red-600/30 text-red-400 border border-red-500/50 rounded-xl font-medium transition-colors disabled:opacity-50"
         >
           Pack
         </button>
@@ -48,7 +48,7 @@ const ActionPanel = ({ isMyTurn, isProcessing, currentBet, maxBetLimit, activePl
           <button 
             onClick={() => onAction('SIDE_SHOW_REQUEST')} 
             disabled={isProcessing}
-            className="p-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-medium transition-colors disabled:opacity-50"
+            className="p-3 bg-slate-900 hover:bg-slate-800 border border-emerald-600 text-emerald-100 rounded-xl font-medium transition-colors disabled:opacity-50"
           >
             Side Show
           </button>
@@ -58,7 +58,7 @@ const ActionPanel = ({ isMyTurn, isProcessing, currentBet, maxBetLimit, activePl
           <button 
             onClick={() => onAction('SHOW_REQUEST')} 
             disabled={isProcessing}
-            className="p-3 bg-purple-600 hover:bg-purple-500 text-white rounded-xl font-medium transition-colors disabled:opacity-50"
+            className="p-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-medium transition-colors disabled:opacity-50"
           >
             Show
           </button>

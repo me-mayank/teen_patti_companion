@@ -1,5 +1,49 @@
 @import "tailwindcss";
 
+@theme {
+  /* PRIMARY BACKGROUND: #070606 */
+  --color-slate-950: #070606;
+  
+  /* SURFACE: #12100F */
+  --color-slate-900: #12100F;
+  
+  /* ELEVATED SURFACE: #1A1714 */
+  --color-slate-800: #1A1714;
+  
+  /* BORDER: #3D2B18 */
+  --color-slate-700: #3D2B18;
+  --color-slate-600: #3D2B18;
+
+  /* SECONDARY TEXT: #AAA39A */
+  --color-slate-500: #AAA39A;
+  --color-slate-400: #AAA39A;
+  
+  /* PRIMARY TEXT: #F5F1E8 */
+  --color-slate-300: #F5F1E8;
+  --color-slate-200: #F5F1E8;
+  --color-white: #F5F1E8;
+
+  /* DARK GOLD: #9A6624 */
+  --color-emerald-900: #9A6624;
+  --color-emerald-800: #9A6624;
+  --color-emerald-700: #9A6624;
+  --color-emerald-600: #9A6624;
+  
+  /* PRIMARY GOLD: #D7A656 */
+  --color-emerald-500: #D7A656;
+  
+  /* LIGHT GOLD: #F6E59B */
+  --color-emerald-400: #F6E59B;
+  --color-emerald-300: #F6E59B;
+  --color-emerald-200: #F6E59B;
+  --color-emerald-100: #F6E59B;
+  
+  /* ACCENT RED: #C62828 */
+  --color-red-600: #C62828;
+  --color-red-500: #C62828;
+  --color-red-400: #C62828;
+}
+
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',

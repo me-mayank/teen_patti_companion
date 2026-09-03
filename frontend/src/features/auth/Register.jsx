@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from './AuthContext';
-import { Gamepad2, AlertCircle } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
+import logo from '../../assets/logo.png';
 
 const Register = () => {
   const [name, setName] = useState('');
@@ -36,8 +37,8 @@ const Register = () => {
       <div className="relative w-full max-w-md">
         <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 p-8 rounded-3xl shadow-2xl">
           <div className="flex flex-col items-center mb-8">
-            <div className="w-16 h-16 bg-gradient-to-tr from-emerald-500 to-emerald-300 rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-500/20 mb-4">
-              <Gamepad2 className="w-8 h-8 text-white" />
+            <div className="w-24 h-24 rounded-2xl overflow-hidden shadow-lg shadow-emerald-500/20 mb-4 border border-emerald-500/30">
+              <img src={logo} alt="Teen Patti Logo" className="w-full h-full object-cover" />
             </div>
             <h1 className="text-3xl font-bold text-white tracking-tight">Join the Game</h1>
             <p className="text-slate-400 mt-2">Create your player account</p>

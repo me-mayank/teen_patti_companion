@@ -4,6 +4,7 @@ import { useAuth } from '../auth/AuthContext';
 import * as gamesApi from './games.api';
 import * as invitationsApi from '../invitations/invitations.api';
 import { Plus, Play, History, Bell, LogOut, Loader2, Check, X, UserCircle } from 'lucide-react';
+import logo from '../../assets/logo.png';
 
 const Home = () => {
   const { user, logout } = useAuth();
@@ -62,11 +63,16 @@ const Home = () => {
       <div className="max-w-4xl mx-auto relative z-10">
         {/* Header */}
         <div className="flex justify-between items-center mb-12">
-          <div>
-            <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-teal-200">
-              Hello, {user.name}
-            </h1>
-            <p className="text-slate-400">Ready to play Teen Patti?</p>
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl overflow-hidden shadow-lg shadow-emerald-500/20 border border-emerald-500/30">
+              <img src={logo} alt="Teen Patti Logo" className="w-full h-full object-cover" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-emerald-200">
+                Hello, {user.name}
+              </h1>
+              <p className="text-slate-400">Ready to play Teen Patti?</p>
+            </div>
           </div>
           <div className="flex gap-2">
             <button 
