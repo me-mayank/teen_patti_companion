@@ -42,7 +42,7 @@ const roundSchema = new mongoose.Schema(
     sideShowRequest: {
       requestedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
       targetPlayer: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-      result: { type: String, enum: ['PENDING', 'REQUESTER_WON', 'TARGET_WON'] },
+      result: { type: String, enum: ['PENDING', 'ACCEPTED', 'REQUESTER_WON', 'TARGET_WON'] },
     },
     winnerId: {
       type: mongoose.Schema.Types.ObjectId,
