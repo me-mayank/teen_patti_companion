@@ -335,7 +335,7 @@ const GameBoard = () => {
               const totalPlayers = round.players.length;
               // Arrange them sequentially around the circle starting from top
               const angle = (i / totalPlayers) * 2 * Math.PI - Math.PI / 2;
-              const radius = 35; // 35% to keep players inside the outer ring
+              const radius = 31; // Decreased from 35% so players don't cover the badges
               const left = 50 + radius * Math.cos(angle);
               const top = 50 + radius * Math.sin(angle);
               
