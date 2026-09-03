@@ -5,7 +5,7 @@ const roundService = require('./round.service');
 // @route   POST /api/games/:gameId/rounds
 // @access  Private
 const startRound = asyncHandler(async (req, res) => {
-  const round = await roundService.startRound(req.params.gameId, req.user._id);
+  const round = await roundService.startRound(req.params.id, req.user._id);
   res.status(201).json(round);
 });
 
