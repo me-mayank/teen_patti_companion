@@ -167,6 +167,8 @@ const useHybridGame = ({ gameId, user, socket }) => {
                  game?.createdBy?.toString() === user?._id?.toString();
 
   // -- WebRTC ---------------------------------------------------------------
+  const peerActionHandlerRef = useRef(null);
+
   const {
     isWebRTCReady,
     broadcastState,
@@ -188,6 +190,11 @@ const useHybridGame = ({ gameId, user, socket }) => {
       if (winEvent) {
         console.log('[hybrid] ROUND_WIN event received:', winEvent);
         // Could trigger a toast here
+      }
+    }, []),
+    onAction: useCallback((msg) => {
+      if (peerActionHandlerRef.current) {
+        peerActionHandlerRef.current(msg);
       }
     }, []),
   });
@@ -285,6 +292,34 @@ const useHybridGame = ({ gameId, user, socket }) => {
 
     return result;
   }, [broadcastState, broadcastEvents, gameId]);
+
+  // -------------------------------------------------------------------------
+  // Handle incoming peer actions (HOST only)
+  // -------------------------------------------------------------------------
+  useEffect(() => {
+    peerActionHandlerRef.current = (msg) => {
+      const { actionType, payload } = msg;
+
+      const engineFnMap = {
+        BET:              (s, p) => applyBet(s, p),
+        BET_TWICE:        (s, p) => applyBetTwice(s, p),
+        PACK:             (s, p) => applyPack(s, p),
+        SHOW_REQUEST:     (s, p) => applyShowRequest(s, p),
+        SIDE_SHOW_REQUEST:(s, p) => applySideShowRequest(s, p),
+      };
+
+      const fn = engineFnMap[actionType];
+      if (fn) {
+        try {
+          _applyEngineAction(fn, payload);
+        } catch (err) {
+          console.error('[hybrid] host failed to apply peer action:', err);
+        }
+      } else {
+        console.warn('[hybrid] host received unknown action type:', actionType);
+      }
+    };
+  }, [_applyEngineAction]);
 
   // -------------------------------------------------------------------------
   // handleAction — Routes to engine (hybrid) or REST API (fallback)

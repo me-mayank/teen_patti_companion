@@ -58,6 +58,7 @@ const useWebRTC = ({
   isHost: isHostProp,
   onStateUpdate,
   onEvent,
+  onAction,
 }) => {
   // Map of peerUserId → RTCPeerConnection
   const peerConnections = useRef(new Map());
@@ -69,26 +70,35 @@ const useWebRTC = ({
 
   const fallbackTimer = useRef(null);
 
+  // Use a ref for callbacks so DataChannel handlers never need to re-bind
+  const callbacksRef = useRef({ onStateUpdate, onEvent, onAction });
+  useEffect(() => {
+    callbacksRef.current = { onStateUpdate, onEvent, onAction };
+  }, [onStateUpdate, onEvent, onAction]);
+
   // ---------------------------------------------------------------------------
   // DataChannel message handler (called by host AND peer sides)
   // ---------------------------------------------------------------------------
   const _handleDataChannelMessage = useCallback((rawData, fromUserId) => {
     try {
       const msg = JSON.parse(rawData);
+      const { onStateUpdate, onEvent, onAction } = callbacksRef.current;
 
       if (msg.type === 'STATE' && onStateUpdate) {
         onStateUpdate(msg.gameState);
       } else if (msg.type === 'EVENT' && onEvent) {
         onEvent(msg.events);
       } else if (msg.type === 'ACTION') {
-        // Peers should never receive ACTION messages
-        // (only the host processes actions, peers receive STATE)
-        console.warn('[webrtc] received ACTION on peer — ignoring', msg);
+        if (isHostProp && onAction) {
+          onAction(msg, fromUserId);
+        } else {
+          console.warn('[webrtc] received ACTION on peer — ignoring', msg);
+        }
       }
     } catch (e) {
       console.error('[webrtc] failed to parse DataChannel message', e);
     }
-  }, [onStateUpdate, onEvent]);
+  }, [isHostProp]);
 
   // ---------------------------------------------------------------------------
   // Create RTCPeerConnection for a given peer
