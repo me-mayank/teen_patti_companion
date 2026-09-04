@@ -1,5 +1,6 @@
 const asyncHandler = require('../../shared/utils/asyncHandler');
 const gameService = require('./game.service');
+const { settleGame, getSettlementPreview } = require('./settle.service');
 
 // @desc    Create a new game
 // @route   POST /api/games
@@ -98,19 +99,45 @@ module.exports = {
   startGame,
   endGame,
   postSnapshot,
+  settleGameHandler,
+  getSettlementPreviewHandler,
 };
 
 /**
  * POST /api/games/:id/snapshot
  * Receives a periodic state snapshot from the hybrid Host engine.
- * Stores it for recovery purposes. Non-blocking — always returns 200.
- * Phase 4 of hybrid architecture.
  */
 function postSnapshot(req, res) {
-  // In Phase 4 this will persist to DB / Redis.
-  // For now, log and acknowledge — keeps the client non-blocking.
   const { id: gameId } = req.params;
-  const { stateVersion, gameState } = req.body;
+  const { stateVersion } = req.body;
   console.log(`[hybrid] snapshot received: game=${gameId} v${stateVersion}`);
   res.status(200).json({ ok: true, stateVersion });
 }
+
+/**
+ * POST /api/games/:id/settle
+ * Final hybrid settlement: receives engine final state, verifies zero-sum,
+ * reconciles DB, updates global wallets.
+ */
+const settleGameHandler = asyncHandler(async (req, res) => {
+  const { id: gameId } = req.params;
+  const { finalEngineState } = req.body;
+
+  if (!finalEngineState) {
+    res.status(400);
+    throw new Error('finalEngineState is required');
+  }
+
+  const game = await settleGame(gameId, req.user._id, finalEngineState);
+  res.status(200).json({ ok: true, game });
+});
+
+/**
+ * GET /api/games/:id/settlement-preview
+ * Read-only preview of final P&L before confirming settlement.
+ */
+const getSettlementPreviewHandler = asyncHandler(async (req, res) => {
+  const { id: gameId } = req.params;
+  const preview = await getSettlementPreview(gameId);
+  res.status(200).json(preview);
+});

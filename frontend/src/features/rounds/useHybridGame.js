@@ -38,6 +38,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import * as gamesApi from '../games/games.api';
 import * as roundApi from './round.api';
+import { settleGame } from '../games/games.api';
 import useWebRTC from '../../shared/hooks/useWebRTC';
 import {
   createGameState,
@@ -357,10 +358,19 @@ const useHybridGame = ({ gameId, user, socket }) => {
     setProcessing(true);
     try {
       if (isHybridActive && isHost && engineState.current) {
+        // Apply end-game to local engine state
         _applyEngineAction(applyEndGame, {});
-        // Always finalize via REST API to settle wallets
-        await gamesApi.endGame(gameId);
+
+        // Send final snapshot to cloud
+        _sendCloudSnapshot(gameId, engineState.current);
+
+        // === PHASE 4: Final Settlement ===
+        // Send the authoritative final engine state to the cloud.
+        // The server verifies zero-sum, reconciles DB balances, and updates wallets.
+        await settleGame(gameId, engineState.current);
+
       } else {
+        // Fallback: use existing endGame REST API
         await gamesApi.endGame(gameId);
       }
     } catch (err) {

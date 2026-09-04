@@ -11,6 +11,8 @@ const {
   startGame,
   endGame,
   postSnapshot,
+  settleGameHandler,
+  getSettlementPreviewHandler,
 } = require('./game.controller');
 const { getGameTransactions, getGameSummary } = require('../ledger/ledger.controller');
 const { startRound } = require('../rounds/round.controller');
@@ -35,7 +37,9 @@ router.route('/:id/end').patch(protect, endGame);
 router.route('/:id/rounds').post(protect, startRound);
 router.route('/:id/transactions').get(protect, getGameTransactions);
 router.route('/:id/summary').get(protect, getGameSummary);
-router.route('/:id/snapshot').post(protect, postSnapshot);  // Hybrid: async cloud backup
+router.route('/:id/snapshot').post(protect, postSnapshot);               // Hybrid: async cloud backup
+router.route('/:id/settle').post(protect, settleGameHandler);             // Hybrid: final settlement
+router.route('/:id/settlement-preview').get(protect, getSettlementPreviewHandler); // Hybrid: preview
 
 router
   .route('/:id/invitations')

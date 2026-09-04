@@ -68,3 +68,14 @@ export const postSnapshot = async (id, snapshotData) => {
   const response = await axiosClient.post(`/games/${id}/snapshot`, snapshotData);
   return response.data;
 };
+
+// Phase 4 — Hybrid final settlement
+export const settleGame = async (id, finalEngineState) => {
+  const response = await axiosClient.post(`/games/${id}/settle`, { finalEngineState });
+  return response.data;
+};
+
+export const getSettlementPreview = async (id) => {
+  const response = await axiosClient.get(`/games/${id}/settlement-preview`);
+  return response.data;
+};

@@ -211,4 +211,6 @@ module.exports = {
   setTurnOrder,
   startGame,
   endGame,
+  _emitUpdate,   // exported for settle.service.js
 };
+
