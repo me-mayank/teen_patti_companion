@@ -45,6 +45,7 @@ const login = async (email, password) => {
       _id: user._id,
       name: user.name,
       username: user.username,
+      profilePicture: user.profilePicture,
       token: generateToken(user._id),
     };
   } else {
