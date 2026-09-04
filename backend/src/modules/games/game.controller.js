@@ -88,20 +88,6 @@ const endGame = asyncHandler(async (req, res) => {
   res.json(game);
 });
 
-module.exports = {
-  createGame,
-  getGames,
-  getGameHistory,
-  getGameById,
-  getCurrentRound,
-  finalizePlayers,
-  setTurnOrder,
-  startGame,
-  endGame,
-  postSnapshot,
-  settleGameHandler,
-  getSettlementPreviewHandler,
-};
 
 /**
  * POST /api/games/:id/snapshot
@@ -141,3 +127,18 @@ const getSettlementPreviewHandler = asyncHandler(async (req, res) => {
   const preview = await getSettlementPreview(gameId);
   res.status(200).json(preview);
 });
+
+module.exports = {
+  createGame,
+  getGames,
+  getGameHistory,
+  getGameById,
+  getCurrentRound,
+  finalizePlayers,
+  setTurnOrder,
+  startGame,
+  endGame,
+  postSnapshot,
+  settleGameHandler,
+  getSettlementPreviewHandler,
+};
