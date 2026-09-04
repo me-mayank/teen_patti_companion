@@ -61,3 +61,10 @@ export const getGameTransactions = async (id) => {
   const response = await axiosClient.get(`/games/${id}/transactions`);
   return response.data;
 };
+
+// Phase 4 — Cloud snapshot for hybrid architecture
+// Called async in the background by useHybridGame after every N actions
+export const postSnapshot = async (id, snapshotData) => {
+  const response = await axiosClient.post(`/games/${id}/snapshot`, snapshotData);
+  return response.data;
+};

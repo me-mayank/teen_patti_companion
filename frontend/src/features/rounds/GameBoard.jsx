@@ -8,6 +8,7 @@ import { Loader2, Crown } from 'lucide-react';
 import PlayerCircle from './components/PlayerCircle';
 import PotArea from './components/PotArea';
 import ActionPanel from './components/ActionPanel';
+import useHybridGame from './useHybridGame';
 
 const GameBoard = () => {
   const { id: gameId } = useParams();
@@ -15,109 +16,24 @@ const GameBoard = () => {
   const { user } = useAuth();
   const socket = useSocket();
 
-  const [game, setGame] = useState(null);
-  const [round, setRound] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [processing, setProcessing] = useState(false);
-
-  const fetchGameState = useCallback(async () => {
-    try {
-      const g = await gamesApi.getGameById(gameId);
-      setGame(g);
-      
-      const r = await gamesApi.getCurrentRound(gameId);
-      setRound(r);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  }, [gameId]);
-
-  useEffect(() => {
-    fetchGameState();
-  }, [fetchGameState]);
-
-  useEffect(() => {
-    if (socket) {
-      socket.emit('joinGame', gameId);
-      
-      socket.on('round:update', (payload) => {
-        if (payload && payload.game) setGame(payload.game);
-        if (payload && payload.round) setRound(payload.round);
-        if (!payload || !payload.game) fetchGameState();
-      });
-      socket.on('game:update', (payload) => {
-        if (payload && payload.game) setGame(payload.game);
-        if (payload && payload.round) setRound(payload.round);
-        if (!payload || !payload.game) fetchGameState();
-      });
-      socket.on('round:completed', (payload) => {
-        // Show winner modal or similar, then refresh
-        if (payload && payload.game) setGame(payload.game);
-        if (payload && payload.round) setRound(payload.round);
-        if (!payload || !payload.game) fetchGameState();
-      });
-
-      return () => {
-        socket.off('round:update');
-        socket.off('game:update');
-        socket.off('round:completed');
-      };
-    }
-  }, [socket, gameId, fetchGameState]);
-
-  const handleAction = async (action) => {
-    setProcessing(true);
-    try {
-      let updatedRound;
-      switch (action) {
-        case 'BET':
-          updatedRound = await roundApi.bet(round._id);
-          break;
-        case 'BET_TWICE':
-          updatedRound = await roundApi.betTwice(round._id);
-          break;
-        case 'PACK':
-          updatedRound = await roundApi.pack(round._id);
-          break;
-        case 'SHOW_REQUEST':
-          updatedRound = await roundApi.requestShow(round._id);
-          break;
-        case 'SIDE_SHOW_REQUEST':
-          updatedRound = await roundApi.requestSideShow(round._id);
-          break;
-      }
-      if (updatedRound) setRound(updatedRound);
-    } catch (err) {
-      console.error(err);
-      alert(err.response?.data?.message || `Failed to perform ${action}`);
-    } finally {
-      setProcessing(false);
-    }
-  };
-
-  const handleStartRound = async () => {
-    setProcessing(true);
-    try {
-      await roundApi.startRound(gameId);
-    } catch (err) {
-      alert(err.response?.data?.message || 'Failed to start round');
-    } finally {
-      setProcessing(false);
-    }
-  };
+  const {
+    game, round,
+    loading, processing,
+    isHybridActive,
+    handleAction,
+    handleStartRound,
+    handleEndGame: _handleEndGame,
+    handleSideShowRespond,
+    handleSideShowResult,
+    handleShowResult,
+  } = useHybridGame({ gameId, user, socket });
 
   const handleEndGame = async () => {
-    if (!window.confirm("Are you sure you want to end this game?")) return;
-    setProcessing(true);
+    if (!window.confirm('Are you sure you want to end this game?')) return;
     try {
-      await gamesApi.endGame(gameId);
-      // We don't navigate immediately; the socket will update game.status to 'ENDED'
+      await _handleEndGame();
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to end game');
-    } finally {
-      setProcessing(false);
+      alert(err.message || 'Failed to end game');
     }
   };
 
@@ -221,14 +137,14 @@ const GameBoard = () => {
                     <p className="text-xl text-white mb-8">{reqPlayerObj?.userId?.name} wants a Side Show with you.</p>
                     <div className="flex gap-6">
                       <button 
-                        onClick={async () => { setProcessing(true); try { const updated = await roundApi.respondSideShow(round._id, true); setRound(updated); } catch (e) { alert(e.response?.data?.message || 'Error'); } finally { setProcessing(false); } }}
+                        onClick={async () => { try { await handleSideShowRespond(true); } catch (e) { alert(e.message || 'Error'); } }}
                         disabled={processing}
                         className="bg-[#D7A656] text-black font-bold px-8 py-3 rounded-xl hover:bg-[#c2954c] transition-all"
                       >
                         Accept
                       </button>
                       <button 
-                        onClick={async () => { setProcessing(true); try { const updated = await roundApi.respondSideShow(round._id, false); setRound(updated); } catch (e) { alert(e.response?.data?.message || 'Error'); } finally { setProcessing(false); } }}
+                        onClick={async () => { try { await handleSideShowRespond(false); } catch (e) { alert(e.message || 'Error'); } }}
                         disabled={processing}
                         className="bg-red-950/50 border border-red-500/50 text-red-500 font-bold px-8 py-3 rounded-xl hover:bg-red-900/50 transition-all"
                       >
@@ -257,10 +173,8 @@ const GameBoard = () => {
                          <button
                            key={p.userId?._id}
                            onClick={async () => {
-                             setProcessing(true);
-                             try { const updated = await roundApi.submitSideShowResult(round._id, p.userId?._id); setRound(updated); }
-                             catch (e) { alert(e.response?.data?.message || 'Error'); }
-                             finally { setProcessing(false); }
+                             try { await handleSideShowResult(p.userId?._id); }
+                             catch (e) { alert(e.message || 'Error'); }
                            }}
                            disabled={processing}
                            className="bg-[#12100F] border-2 border-red-500/30 hover:border-red-500 hover:bg-[#1A1714] p-6 rounded-2xl flex flex-col items-center gap-4 transition-all min-w-[160px] shadow-lg shadow-black/50"
@@ -302,14 +216,10 @@ const GameBoard = () => {
                     <button
                       key={p.userId?._id}
                       onClick={async () => {
-                        setProcessing(true);
                         try {
-                          const updated = await roundApi.submitShowResult(round._id, p.userId?._id);
-                          setRound(updated);
+                          await handleShowResult(p.userId?._id);
                         } catch (err) {
-                          alert(err.response?.data?.message || 'Failed to submit show result');
-                        } finally {
-                          setProcessing(false);
+                          alert(err.message || 'Failed to submit show result');
                         }
                       }}
                       disabled={processing}

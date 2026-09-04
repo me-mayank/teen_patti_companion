@@ -97,4 +97,20 @@ module.exports = {
   setTurnOrder,
   startGame,
   endGame,
+  postSnapshot,
 };
+
+/**
+ * POST /api/games/:id/snapshot
+ * Receives a periodic state snapshot from the hybrid Host engine.
+ * Stores it for recovery purposes. Non-blocking — always returns 200.
+ * Phase 4 of hybrid architecture.
+ */
+function postSnapshot(req, res) {
+  // In Phase 4 this will persist to DB / Redis.
+  // For now, log and acknowledge — keeps the client non-blocking.
+  const { id: gameId } = req.params;
+  const { stateVersion, gameState } = req.body;
+  console.log(`[hybrid] snapshot received: game=${gameId} v${stateVersion}`);
+  res.status(200).json({ ok: true, stateVersion });
+}

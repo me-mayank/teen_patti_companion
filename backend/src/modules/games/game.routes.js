@@ -10,6 +10,7 @@ const {
   setTurnOrder,
   startGame,
   endGame,
+  postSnapshot,
 } = require('./game.controller');
 const { getGameTransactions, getGameSummary } = require('../ledger/ledger.controller');
 const { startRound } = require('../rounds/round.controller');
@@ -34,6 +35,7 @@ router.route('/:id/end').patch(protect, endGame);
 router.route('/:id/rounds').post(protect, startRound);
 router.route('/:id/transactions').get(protect, getGameTransactions);
 router.route('/:id/summary').get(protect, getGameSummary);
+router.route('/:id/snapshot').post(protect, postSnapshot);  // Hybrid: async cloud backup
 
 router
   .route('/:id/invitations')

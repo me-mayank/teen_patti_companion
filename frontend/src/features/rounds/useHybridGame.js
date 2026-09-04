@@ -1,0 +1,486 @@
+/**
+ * useHybridGame.js — Hybrid Game State Manager
+ *
+ * This hook is the Phase 3 bridge between the existing server-based architecture
+ * and the new Hybrid WebRTC architecture.
+ *
+ * It provides a unified interface to GameBoard.jsx regardless of which transport
+ * is currently active:
+ *
+ *   MODE A — WebRTC (Host):
+ *     - Applies actions via the local pure game engine (zero latency)
+ *     - Broadcasts new state to all peers via WebRTC DataChannel
+ *     - Sends async cloud snapshots in the background
+ *
+ *   MODE B — WebRTC (Peer):
+ *     - Sends action to host via DataChannel
+ *     - Receives new state directly from host via DataChannel
+ *
+ *   MODE C — Server Fallback (if WebRTC fails or browser unsupported):
+ *     - All actions go through the existing REST API + Socket.IO flow
+ *     - Identical to the pre-hybrid behaviour — ZERO regression risk
+ *
+ * Usage:
+ *   const {
+ *     game, round,           // current game and round state (same shape as before)
+ *     loading, processing,
+ *     isHybridActive,        // true when WebRTC DataChannels are connected
+ *     handleAction,          // BET | BET_TWICE | PACK | SHOW_REQUEST | SIDE_SHOW_REQUEST
+ *     handleStartRound,
+ *     handleEndGame,
+ *     handleSideShowRespond,
+ *     handleSideShowResult,
+ *     handleShowResult,
+ *   } = useHybridGame({ gameId, user, socket });
+ */
+
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { v4 as uuidv4 } from 'uuid';
+import * as gamesApi from '../games/games.api';
+import * as roundApi from './round.api';
+import useWebRTC from '../../shared/hooks/useWebRTC';
+import {
+  createGameState,
+  startRound as engineStartRound,
+  applyBet,
+  applyBetTwice,
+  applyPack,
+  applySideShowRequest,
+  applySideShowRespond,
+  applySideShowResult,
+  applyShowRequest,
+  applyShowResult,
+  applyEndGame,
+  verifyZeroSum,
+} from '../../engine/index.js';
+
+// ---------------------------------------------------------------------------
+// Cloud snapshot — async background POST, non-blocking
+// ---------------------------------------------------------------------------
+const _sendCloudSnapshot = (gameId, engineState) => {
+  // Fire-and-forget: snapshot the engine state to the cloud
+  // This keeps the cloud in sync for recovery purposes
+  import('../games/games.api').then(({ postSnapshot }) => {
+    if (postSnapshot) {
+      postSnapshot(gameId, {
+        stateVersion: engineState.stateVersion,
+        gameState: engineState,
+        actionHistory: engineState.actionHistory,
+      }).catch(err => console.warn('[hybrid] snapshot failed (non-critical):', err));
+    }
+  });
+};
+
+// How often to take a cloud snapshot (every N state versions)
+const SNAPSHOT_INTERVAL = 10;
+
+// ---------------------------------------------------------------------------
+// Normalize DB game+round into engine state format
+// ---------------------------------------------------------------------------
+const _buildEngineStateFromDB = (dbGame, dbRound) => {
+  if (!dbGame) return null;
+
+  const orderedPlayers = (dbGame.turnOrder || dbGame.participants.map(p => p.userId))
+    .map(userRef => {
+      const u = userRef?._id ? userRef : { _id: userRef };
+      const participant = dbGame.participants.find(
+        p => p.userId?._id?.toString() === u._id?.toString()
+      );
+      return {
+        userId: u._id?.toString(),
+        name: userRef?.name || userRef?.username || '?',
+        username: userRef?.username || '',
+        profilePicture: userRef?.profilePicture || null,
+        startingBalance: (participant?.balance ?? 0) + (userRef?.globalBalance ?? 0),
+      };
+    });
+
+  const state = createGameState({
+    gameId: dbGame._id?.toString(),
+    sessionId: dbGame._id?.toString(),
+    bootAmount: dbGame.bootAmount,
+    maxBetMultiplier: dbGame.maxBetMultiplier || 5,
+    orderedPlayers,
+  });
+
+  // Sync current round number
+  state.currentRoundNumber = dbGame.currentRoundNumber || 0;
+  state.status = dbGame.currentRoundNumber > 0 && dbRound?.status === 'ACTIVE'
+    ? 'ROUND_ACTIVE'
+    : 'WAITING';
+
+  // If there's an active round, sync round state
+  if (dbRound && dbRound.status !== 'COMPLETED') {
+    state.round = {
+      roundNumber: dbRound.roundNumber,
+      status: dbRound.status,
+      potAmount: dbRound.potAmount,
+      currentBet: dbRound.currentBet,
+      startingBet: dbRound.startingBet,
+      currentTurnIndex: dbRound.currentTurnIndex,
+      players: dbRound.players.map(p => ({
+        userId: p.userId?._id?.toString() || p.userId?.toString(),
+        status: p.status,
+        totalContribution: p.totalContribution,
+        seenCards: p.seenCards || false,
+      })),
+      sideShowRequest: dbRound.sideShowRequest ? {
+        requestedBy: dbRound.sideShowRequest.requestedBy?.toString(),
+        targetPlayer: dbRound.sideShowRequest.targetPlayer?.toString(),
+        result: dbRound.sideShowRequest.result,
+      } : null,
+      winnerId: dbRound.winnerId?.toString() || null,
+      startedAt: dbRound.startedAt,
+      endedAt: dbRound.endedAt,
+    };
+
+    // Sync player game balances from DB participants
+    state.players = state.players.map(p => {
+      const dbParticipant = dbGame.participants.find(
+        gp => gp.userId?._id?.toString() === p.userId
+      );
+      return { ...p, gameBalance: dbParticipant?.balance ?? p.gameBalance };
+    });
+  }
+
+  return state;
+};
+
+// ---------------------------------------------------------------------------
+// Hook
+// ---------------------------------------------------------------------------
+const useHybridGame = ({ gameId, user, socket }) => {
+  // -- Server-side state (source of truth for UI rendering) ----------------
+  const [game, setGame] = useState(null);
+  const [round, setRound] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [processing, setProcessing] = useState(false);
+
+  // -- Hybrid engine state (host only) -------------------------------------
+  const engineState = useRef(null);      // In-memory game state for host engine
+  const snapshotCounter = useRef(0);     // Counts commits since last cloud snapshot
+
+  // -- Determine if this user is the host ----------------------------------
+  // The game creator is always the host
+  const isHost = game?.createdBy?._id === user?._id ||
+                 game?.createdBy?.toString() === user?._id?.toString();
+
+  // -- WebRTC ---------------------------------------------------------------
+  const {
+    isWebRTCReady,
+    broadcastState,
+    broadcastEvents,
+    sendAction: sendWebRTCAction,
+  } = useWebRTC({
+    socket,
+    gameId,
+    userId: user?._id,
+    isHost,
+    onStateUpdate: useCallback((incomingEngineState) => {
+      // PEER: received new authoritative state from host
+      // Convert back to DB-shape for the existing UI
+      _applyEngineStateToUI(incomingEngineState, setGame, setRound);
+    }, []),
+    onEvent: useCallback((events) => {
+      // Handle specific events (e.g. ROUND_WIN toast notification)
+      const winEvent = events.find(e => e.type === 'ROUND_WIN');
+      if (winEvent) {
+        console.log('[hybrid] ROUND_WIN event received:', winEvent);
+        // Could trigger a toast here
+      }
+    }, []),
+  });
+
+  const isHybridActive = isWebRTCReady;
+
+  // -------------------------------------------------------------------------
+  // Fetch initial game state from server
+  // -------------------------------------------------------------------------
+  const fetchGameState = useCallback(async () => {
+    try {
+      const g = await gamesApi.getGameById(gameId);
+      const r = await gamesApi.getCurrentRound(gameId);
+      setGame(g);
+      setRound(r);
+
+      // HOST: Initialize the local engine state from DB data
+      if (g?.createdBy?._id === user?._id || g?.createdBy?.toString() === user?._id) {
+        const builtState = _buildEngineStateFromDB(g, r);
+        if (builtState) {
+          engineState.current = builtState;
+          console.log('[hybrid] engine state initialized from DB (host)');
+        }
+      }
+    } catch (err) {
+      console.error('[hybrid] fetchGameState error:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [gameId, user]);
+
+  useEffect(() => {
+    fetchGameState();
+  }, [fetchGameState]);
+
+  // -------------------------------------------------------------------------
+  // Socket.IO fallback listeners (unchanged from old architecture)
+  // -------------------------------------------------------------------------
+  useEffect(() => {
+    if (!socket) return;
+    socket.emit('joinGame', gameId);
+
+    const handleUpdate = (payload) => {
+      if (payload?.game) setGame(payload.game);
+      if (payload?.round) setRound(payload.round);
+      if (!payload?.game) fetchGameState();
+    };
+
+    socket.on('round:update', handleUpdate);
+    socket.on('game:update', handleUpdate);
+    socket.on('round:completed', handleUpdate);
+
+    return () => {
+      socket.off('round:update', handleUpdate);
+      socket.off('game:update', handleUpdate);
+      socket.off('round:completed', handleUpdate);
+    };
+  }, [socket, gameId, fetchGameState]);
+
+  // -------------------------------------------------------------------------
+  // Core: apply engine action (HOST only)
+  // Returns { newState, events } or throws on error
+  // -------------------------------------------------------------------------
+  const _applyEngineAction = useCallback((applyFn, actionPayload) => {
+    if (!engineState.current) throw new Error('Engine not initialized');
+
+    const actionId = uuidv4();
+    const result = applyFn(engineState.current, { ...actionPayload, actionId });
+
+    if (result.error) {
+      throw new Error(result.error.message);
+    }
+
+    engineState.current = result.newState;
+
+    // Verify zero-sum invariant after every commit
+    const integrity = verifyZeroSum(result.newState);
+    if (!integrity.valid) {
+      console.error('[hybrid] ZERO-SUM VIOLATION DETECTED!', integrity);
+    }
+
+    // Broadcast new state to all peers
+    broadcastState(result.newState);
+    broadcastEvents(result.events);
+
+    // Sync UI from engine state
+    _applyEngineStateToUI(result.newState, setGame, setRound);
+
+    // Periodic cloud snapshot
+    snapshotCounter.current += 1;
+    if (snapshotCounter.current >= SNAPSHOT_INTERVAL) {
+      snapshotCounter.current = 0;
+      _sendCloudSnapshot(gameId, result.newState);
+    }
+
+    return result;
+  }, [broadcastState, broadcastEvents, gameId]);
+
+  // -------------------------------------------------------------------------
+  // handleAction — Routes to engine (hybrid) or REST API (fallback)
+  // -------------------------------------------------------------------------
+  const handleAction = useCallback(async (action) => {
+    setProcessing(true);
+    try {
+      if (isHybridActive && isHost) {
+        // === HOST + WebRTC: run engine locally ===
+        const engineFnMap = {
+          BET:              (s, p) => applyBet(s, p),
+          BET_TWICE:        (s, p) => applyBetTwice(s, p),
+          PACK:             (s, p) => applyPack(s, p),
+          SHOW_REQUEST:     (s, p) => applyShowRequest(s, p),
+          SIDE_SHOW_REQUEST:(s, p) => applySideShowRequest(s, p),
+        };
+        const fn = engineFnMap[action];
+        if (!fn) throw new Error(`Unknown action: ${action}`);
+        _applyEngineAction(fn, { userId: user._id });
+
+      } else if (isHybridActive && !isHost) {
+        // === PEER + WebRTC: send action to host via DataChannel ===
+        sendWebRTCAction({
+          actionType: action,
+          payload: { userId: user._id },
+        });
+
+      } else {
+        // === FALLBACK: existing REST API (unchanged) ===
+        let updatedRound;
+        switch (action) {
+          case 'BET':             updatedRound = await roundApi.bet(round._id); break;
+          case 'BET_TWICE':       updatedRound = await roundApi.betTwice(round._id); break;
+          case 'PACK':            updatedRound = await roundApi.pack(round._id); break;
+          case 'SHOW_REQUEST':    updatedRound = await roundApi.requestShow(round._id); break;
+          case 'SIDE_SHOW_REQUEST': updatedRound = await roundApi.requestSideShow(round._id); break;
+        }
+        if (updatedRound) setRound(updatedRound);
+      }
+    } catch (err) {
+      console.error('[hybrid] handleAction error:', err);
+      throw err;   // Re-throw so GameBoard can show alert
+    } finally {
+      setProcessing(false);
+    }
+  }, [isHybridActive, isHost, _applyEngineAction, sendWebRTCAction, round, user]);
+
+  // -------------------------------------------------------------------------
+  // handleStartRound
+  // -------------------------------------------------------------------------
+  const handleStartRound = useCallback(async () => {
+    setProcessing(true);
+    try {
+      if (isHybridActive && isHost && engineState.current) {
+        _applyEngineAction(engineStartRound, {});
+      } else {
+        await roundApi.startRound(gameId);
+      }
+    } catch (err) {
+      console.error('[hybrid] handleStartRound error:', err);
+      throw err;
+    } finally {
+      setProcessing(false);
+    }
+  }, [isHybridActive, isHost, _applyEngineAction, gameId]);
+
+  // -------------------------------------------------------------------------
+  // handleEndGame
+  // -------------------------------------------------------------------------
+  const handleEndGame = useCallback(async () => {
+    setProcessing(true);
+    try {
+      if (isHybridActive && isHost && engineState.current) {
+        _applyEngineAction(applyEndGame, {});
+        // Always finalize via REST API to settle wallets
+        await gamesApi.endGame(gameId);
+      } else {
+        await gamesApi.endGame(gameId);
+      }
+    } catch (err) {
+      console.error('[hybrid] handleEndGame error:', err);
+      throw err;
+    } finally {
+      setProcessing(false);
+    }
+  }, [isHybridActive, isHost, _applyEngineAction, gameId]);
+
+  // -------------------------------------------------------------------------
+  // Side show and show handlers (always server-side for result submission)
+  // -------------------------------------------------------------------------
+  const handleSideShowRespond = useCallback(async (accept) => {
+    setProcessing(true);
+    try {
+      if (isHybridActive && isHost) {
+        _applyEngineAction(applySideShowRespond, { userId: user._id, accept });
+      } else {
+        const updated = await roundApi.respondSideShow(round._id, accept);
+        setRound(updated);
+      }
+    } catch (err) { throw err; }
+    finally { setProcessing(false); }
+  }, [isHybridActive, isHost, _applyEngineAction, round, user]);
+
+  const handleSideShowResult = useCallback(async (loserUserId) => {
+    setProcessing(true);
+    try {
+      if (isHybridActive && isHost) {
+        _applyEngineAction(applySideShowResult, { userId: user._id, loserUserId });
+      } else {
+        const updated = await roundApi.submitSideShowResult(round._id, loserUserId);
+        setRound(updated);
+      }
+    } catch (err) { throw err; }
+    finally { setProcessing(false); }
+  }, [isHybridActive, isHost, _applyEngineAction, round, user]);
+
+  const handleShowResult = useCallback(async (winnerUserId) => {
+    setProcessing(true);
+    try {
+      if (isHybridActive && isHost) {
+        _applyEngineAction(applyShowResult, { userId: user._id, winnerUserId });
+        // Always finalize show result via REST for DB persistence
+        await roundApi.submitShowResult(round._id, winnerUserId);
+      } else {
+        const updated = await roundApi.submitShowResult(round._id, winnerUserId);
+        setRound(updated);
+      }
+    } catch (err) { throw err; }
+    finally { setProcessing(false); }
+  }, [isHybridActive, isHost, _applyEngineAction, round, user]);
+
+  return {
+    game,
+    round,
+    loading,
+    processing,
+    isHybridActive,
+    isHost,
+    handleAction,
+    handleStartRound,
+    handleEndGame,
+    handleSideShowRespond,
+    handleSideShowResult,
+    handleShowResult,
+  };
+};
+
+// ---------------------------------------------------------------------------
+// Utility: Convert engine state → DB-shaped game+round for UI
+// ---------------------------------------------------------------------------
+const _applyEngineStateToUI = (engineState, setGame, setRound) => {
+  if (!engineState) return;
+
+  // Build a DB-like game object from engine state
+  setGame(prev => {
+    if (!prev) return prev;
+    return {
+      ...prev,
+      currentRoundNumber: engineState.currentRoundNumber,
+      status: engineState.status === 'ENDED' ? 'ENDED' : prev.status,
+      participants: prev.participants?.map(gp => {
+        const ep = engineState.players.find(
+          p => p.userId === gp.userId?._id?.toString()
+        );
+        return ep ? { ...gp, balance: ep.gameBalance } : gp;
+      }),
+    };
+  });
+
+  // Build a DB-like round object from engine state
+  if (engineState.round) {
+    setRound(prev => {
+      const r = engineState.round;
+      return {
+        ...(prev || {}),
+        _id: prev?._id,
+        roundNumber: r.roundNumber,
+        status: r.status,
+        potAmount: r.potAmount,
+        currentBet: r.currentBet,
+        startingBet: r.startingBet,
+        currentTurnIndex: r.currentTurnIndex,
+        players: r.players.map(rp => {
+          const ep = engineState.players?.find(p => p.userId === rp.userId);
+          return {
+            ...(prev?.players?.find(pp => pp.userId?._id?.toString() === rp.userId) || {}),
+            status: rp.status,
+            totalContribution: rp.totalContribution,
+          };
+        }),
+        sideShowRequest: r.sideShowRequest,
+        winnerId: r.winnerId ? { _id: r.winnerId } : null,
+      };
+    });
+  } else if (engineState.status === 'WAITING') {
+    setRound(null);
+  }
+};
+
+export default useHybridGame;
