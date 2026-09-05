@@ -251,21 +251,35 @@ const useHybridGame = ({ gameId, user, socket }) => {
     socket.emit('joinGame', gameId);
 
     const handleUpdate = (payload) => {
-      if (payload?.game) setGame(payload.game);
-      if (payload?.round) setRound(payload.round);
-      if (!payload?.game) fetchGameState();
+      const updatedGame  = payload?.game  || null;
+      const updatedRound = payload?.round || null;
+
+      if (updatedGame)  setGame(updatedGame);
+      if (updatedRound) setRound(updatedRound);
+      if (!updatedGame) { fetchGameState(); return; }
+
+      // HOST: re-sync engine state from DB payload so it's always
+      // consistent with the server, even when actions went via REST API.
+      if (isHostRef.current && updatedGame) {
+        const rebuilt = _buildEngineStateFromDB(updatedGame, updatedRound);
+        if (rebuilt) {
+          engineState.current = rebuilt;
+          console.log('[hybrid] engine re-synced from socket update v' + rebuilt.stateVersion);
+        }
+      }
     };
 
-    socket.on('round:update', handleUpdate);
-    socket.on('game:update', handleUpdate);
+    socket.on('round:update',   handleUpdate);
+    socket.on('game:update',    handleUpdate);
     socket.on('round:completed', handleUpdate);
 
     return () => {
-      socket.off('round:update', handleUpdate);
-      socket.off('game:update', handleUpdate);
+      socket.off('round:update',    handleUpdate);
+      socket.off('game:update',     handleUpdate);
       socket.off('round:completed', handleUpdate);
     };
   }, [socket, gameId, fetchGameState]);
+
 
   // -------------------------------------------------------------------------
   // Core: apply engine action (HOST only)
@@ -364,13 +378,20 @@ const useHybridGame = ({ gameId, user, socket }) => {
         // === FALLBACK: existing REST API (unchanged) ===
         let updatedRound;
         switch (action) {
-          case 'BET':             updatedRound = await roundApi.bet(round._id); break;
-          case 'BET_TWICE':       updatedRound = await roundApi.betTwice(round._id); break;
-          case 'PACK':            updatedRound = await roundApi.pack(round._id); break;
-          case 'SHOW_REQUEST':    updatedRound = await roundApi.requestShow(round._id); break;
+          case 'BET':               updatedRound = await roundApi.bet(round._id); break;
+          case 'BET_TWICE':         updatedRound = await roundApi.betTwice(round._id); break;
+          case 'PACK':              updatedRound = await roundApi.pack(round._id); break;
+          case 'SHOW_REQUEST':      updatedRound = await roundApi.requestShow(round._id); break;
           case 'SIDE_SHOW_REQUEST': updatedRound = await roundApi.requestSideShow(round._id); break;
         }
-        if (updatedRound) setRound(updatedRound);
+        if (updatedRound) {
+          setRound(updatedRound);
+          // HOST: re-sync engine from server response so WebRTC path stays consistent
+          if (isHostRef.current && game) {
+            const rebuilt = _buildEngineStateFromDB(game, updatedRound);
+            if (rebuilt) engineState.current = rebuilt;
+          }
+        }
       }
     } catch (err) {
       console.error('[hybrid] handleAction error:', err);
