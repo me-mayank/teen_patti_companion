@@ -568,9 +568,29 @@ const _applyEngineStateToUI = (engineState, setGame, setRound) => {
 
   // Build a DB-like round object from engine state
   if (engineState.round) {
-    setRound(prev => {
-      const r = engineState.round;
-      return {
+    const r = engineState.round;
+
+    if (r.status === 'COMPLETED' || engineState.status === 'WAITING') {
+      // Round just ended (pack win, show win, etc.).
+      // Push the final completed round state (so winnerId shows in UI)
+      // then clear it so the action panel disappears.
+      setRound(prev => ({
+        ...(prev || {}),
+        _id: prev?._id,
+        roundNumber: r.roundNumber,
+        status: 'COMPLETED',
+        potAmount: r.potAmount,
+        currentBet: r.currentBet,
+        currentTurnIndex: r.currentTurnIndex,
+        players: r.players.map(rp => ({
+          ...(prev?.players?.find(pp => pp.userId?._id?.toString() === rp.userId) || {}),
+          status: rp.status,
+          totalContribution: rp.totalContribution,
+        })),
+        winnerId: r.winnerId ? { _id: r.winnerId } : null,
+      }));
+    } else {
+      setRound(prev => ({
         ...(prev || {}),
         _id: prev?._id,
         roundNumber: r.roundNumber,
@@ -579,18 +599,15 @@ const _applyEngineStateToUI = (engineState, setGame, setRound) => {
         currentBet: r.currentBet,
         startingBet: r.startingBet,
         currentTurnIndex: r.currentTurnIndex,
-        players: r.players.map(rp => {
-          const ep = engineState.players?.find(p => p.userId === rp.userId);
-          return {
-            ...(prev?.players?.find(pp => pp.userId?._id?.toString() === rp.userId) || {}),
-            status: rp.status,
-            totalContribution: rp.totalContribution,
-          };
-        }),
+        players: r.players.map(rp => ({
+          ...(prev?.players?.find(pp => pp.userId?._id?.toString() === rp.userId) || {}),
+          status: rp.status,
+          totalContribution: rp.totalContribution,
+        })),
         sideShowRequest: r.sideShowRequest,
         winnerId: r.winnerId ? { _id: r.winnerId } : null,
-      };
-    });
+      }));
+    }
   } else if (engineState.status === 'WAITING') {
     setRound(null);
   }

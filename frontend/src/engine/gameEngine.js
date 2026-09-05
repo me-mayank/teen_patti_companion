@@ -95,27 +95,32 @@ const _validateBalance = (state, userId, amountRequired) => {
 const _completeRound = (state, winnerId) => {
   const newState = clone(state);
 
-  newState.status = 'COMPLETED';
-  newState.winnerId = winnerId;
-  newState.endedAt = new Date().toISOString();
+  const round = newState.round;
+  round.status = 'COMPLETED';
+  round.winnerId = winnerId;
+  round.endedAt = new Date().toISOString();
 
-  const winner = newState.players.find(p => p.userId === winnerId);
-  if (winner) {
-    winner.status = 'WINNER';
-    winner.gameBalance += newState.potAmount;
+  const roundWinner = round.players.find(p => p.userId === winnerId);
+  if (roundWinner) {
+    roundWinner.status = 'WINNER';
+  }
+
+  const gameWinner = newState.players.find(p => p.userId === winnerId);
+  if (gameWinner) {
+    gameWinner.gameBalance += round.potAmount;
   }
 
   const events = [
     {
       type: 'ROUND_WIN',
       userId: winnerId,
-      amount: newState.potAmount,
+      amount: round.potAmount,
       stateVersion: newState.stateVersion,
     },
     {
       type: 'ROUND_COMPLETED',
       winnerId,
-      potAmount: newState.potAmount,
+      potAmount: round.potAmount,
       stateVersion: newState.stateVersion,
     },
   ];
