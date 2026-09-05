@@ -505,8 +505,8 @@ const getRoundById = async (roundId) => {
 // ---------------------------------------------------------------------------
 // settleRound — called by the host after local engine finishes a round.
 // The server doesn't know the round ended (actions ran via DataChannel).
-// This marks it COMPLETED, records the ROUND_WIN ledger entry, and
-// updates participant balances so startRound can proceed.
+// Uses recordTransaction (ADJUSTMENT) for each player's net deduction and
+// then _completeRound to mark COMPLETED + credit the winner.
 // ---------------------------------------------------------------------------
 const settleRound = async (roundId, { winnerId, potAmount, playerContributions }, requestingUserId) => {
   const session = await mongoose.startSession();
@@ -515,7 +515,7 @@ const settleRound = async (roundId, { winnerId, potAmount, playerContributions }
     const round = await Round.findById(roundId).session(session);
     if (!round) throw new Error('Round not found');
 
-    // Idempotent: already settled (e.g. double-click)
+    // Idempotent: already settled (e.g. double-click or race condition)
     if (round.status === 'COMPLETED') {
       await session.abortTransaction();
       return round;
@@ -529,26 +529,26 @@ const settleRound = async (roundId, { winnerId, potAmount, playerContributions }
       throw new Error('Only the host can settle a round');
     }
 
-    // Apply each player's contribution delta to their participant balance
+    // Deduct every player's total contribution from their participant.balance
+    // using an ADJUSTMENT transaction (negative amount = deduction).
+    // This includes the winner — _completeRound will then credit them the full pot.
     if (playerContributions && Array.isArray(playerContributions)) {
       for (const { userId, totalContribution } of playerContributions) {
-        const participant = game.participants.find(p => p.userId.toString() === userId.toString());
-        if (participant) {
-          // totalContribution is how much they put INTO the pot this round (boot + bets)
-          participant.balance -= totalContribution;
-        }
+        if (!totalContribution || totalContribution <= 0) continue;
+        await recordTransaction(session, {
+          userId,
+          gameId: round.gameId,
+          roundId: round._id,
+          type:   'ADJUSTMENT',
+          amount: -totalContribution,   // negative = deduct from participant.balance
+        });
       }
     }
 
-    // Credit winner with pot
-    const winnerParticipant = game.participants.find(p => p.userId.toString() === winnerId.toString());
-    if (winnerParticipant) {
-      winnerParticipant.balance += potAmount;
-    }
-
-    await game.save({ session });
-
-    // Mark round COMPLETED
+    // _completeRound:
+    //   - marks round.status = 'COMPLETED'
+    //   - sets winner player status = 'WINNER'
+    //   - calls recordTransaction(ROUND_WIN, potAmount) → credits winner balance
     await _completeRound(session, round, winnerId);
 
     await session.commitTransaction();
@@ -564,6 +564,8 @@ const settleRound = async (roundId, { winnerId, potAmount, playerContributions }
     session.endSession();
   }
 };
+
+
 
 module.exports = {
   startRound,
