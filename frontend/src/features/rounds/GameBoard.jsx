@@ -105,7 +105,18 @@ const GameBoard = () => {
       <div className="p-4 flex justify-between items-center z-10 relative bg-slate-950/50 backdrop-blur-md border-b border-slate-800">
         <div>
           <h1 className="font-bold text-lg">{game?.name}</h1>
-          <p className="text-xs text-slate-400">Round {game?.currentRoundNumber || 0}</p>
+          <p className="text-xs text-slate-400 flex items-center gap-2">
+            Round {game?.currentRoundNumber || 0}
+            {/* WebRTC connection status pill */}
+            <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium ${
+              isHybridActive
+                ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                : 'bg-slate-700/50 text-slate-500 border border-slate-700'
+            }`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${isHybridActive ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500'}`} />
+              {isHybridActive ? 'P2P' : 'Server'}
+            </span>
+          </p>
         </div>
         <div className="flex gap-2">
           {game?.createdBy?._id === user._id && (
