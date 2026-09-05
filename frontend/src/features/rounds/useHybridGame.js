@@ -87,12 +87,17 @@ const _buildEngineStateFromDB = (dbGame, dbRound) => {
       const participant = dbGame.participants.find(
         p => p.userId?._id?.toString() === u._id?.toString()
       );
+      const globalBal = userRef?.globalBalance ?? 0;
+      const inGameBal = participant?.balance ?? 0;
       return {
         userId: u._id?.toString(),
         name: userRef?.name || userRef?.username || '?',
         username: userRef?.username || '',
         profilePicture: userRef?.profilePicture || null,
-        startingBalance: (participant?.balance ?? 0) + (userRef?.globalBalance ?? 0),
+        // Store globalBalance on the player so mid-round re-syncs can
+        // always access it without re-fetching the populated user object.
+        globalBalance: globalBal,
+        startingBalance: inGameBal + globalBal,
       };
     });
 
@@ -135,19 +140,22 @@ const _buildEngineStateFromDB = (dbGame, dbRound) => {
       endedAt: dbRound.endedAt,
     };
 
-    // Sync player game balances from DB participants
+    // Sync player game balances from DB participants.
+    // Use globalBalance stored on state.players (set during createGameState from
+    // orderedPlayers above) as the reliable source — it doesn't depend on the
+    // participants.userId being populated in this particular DB fetch.
     state.players = state.players.map(p => {
       const dbParticipant = dbGame.participants.find(
         gp => gp.userId?._id?.toString() === p.userId
       );
-      const globalBal  = dbParticipant?.userId?.globalBalance ?? 0;
-      const inGameBal  = dbParticipant?.balance ?? 0;
+      const inGameBal = dbParticipant?.balance ?? 0;
+      // Prefer globalBalance already stored on player (from initial build).
+      // Fall back to reading from populated userId if somehow missing.
+      const globalBal = p.globalBalance ?? dbParticipant?.userId?.globalBalance ?? 0;
       return {
         ...p,
-        // inGameBalance: what's shown in the UI (net result within this game)
         inGameBalance: inGameBal,
-        // gameBalance: used for bankruptcy check — covers in-game losses from wallet
-        gameBalance: inGameBal + globalBal,
+        gameBalance:   inGameBal + globalBal,
       };
     });
   }

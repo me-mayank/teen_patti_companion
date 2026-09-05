@@ -161,6 +161,10 @@ export const createGameState = ({ gameId, sessionId, bootAmount, maxBetMultiplie
     profilePicture: p.profilePicture ?? null,
     gameBalance: p.startingBalance,
     totalDeposited: p.startingBalance,
+    // Store globalBalance so mid-round re-syncs can always compute
+    // gameBalance = inGameBal + globalBalance without needing the DB
+    // participants.userId to be populated.
+    globalBalance: p.globalBalance ?? 0,
   })),
   eventLog: [],            // Full audit log for cloud backup
   startedAt: new Date().toISOString(),
