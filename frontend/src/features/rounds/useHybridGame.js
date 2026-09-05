@@ -204,7 +204,12 @@ const useHybridGame = ({ gameId, user, socket }) => {
     }, []),
   });
 
-  const isHybridActive = isWebRTCReady;  // WebRTC re-enabled with proper timing
+  const isHybridActive = isWebRTCReady;
+
+  // Keep a ref for isWebRTCReady so socket closures always read current value
+  // without needing to be re-registered when it changes.
+  const isWebRTCReadyRef = useRef(false);
+  useEffect(() => { isWebRTCReadyRef.current = isWebRTCReady; }, [isWebRTCReady]);
 
   // -------------------------------------------------------------------------
   // Fetch initial game state from server
@@ -258,17 +263,28 @@ const useHybridGame = ({ gameId, user, socket }) => {
       if (updatedRound) setRound(updatedRound);
       if (!updatedGame) { fetchGameState(); return; }
 
-      // HOST: re-sync engine from server truth, then immediately
-      // broadcast the new state to all peers via DataChannel.
-      // This is the WebRTC latency win: peers get the update from the
-      // host's DataChannel BEFORE their own socket event fires.
       if (isHostRef.current && updatedGame) {
         const rebuilt = _buildEngineStateFromDB(updatedGame, updatedRound);
         if (rebuilt) {
-          engineState.current = rebuilt;
-          // Push to peers via DataChannel (faster than waiting for socket)
-          broadcastState(rebuilt);
-          console.log('[hybrid] state broadcast to peers v' + rebuilt.stateVersion);
+          // KEY RULE: When WebRTC is active, the local engine is the
+          // source of truth for mid-round state. Only re-sync from server
+          // when a NEW round starts (engine needs initialization) or when
+          // WebRTC is inactive (fallback mode). Never overwrite the engine
+          // with stale server state mid-round.
+          const engineRoundNum  = engineState.current?.currentRoundNumber ?? -1;
+          const serverRoundNum  = rebuilt.currentRoundNumber ?? 0;
+          const isNewRound      = serverRoundNum !== engineRoundNum;
+          const isHybridOn      = isWebRTCReadyRef.current;
+
+          if (!isHybridOn || isNewRound || !engineState.current?.round) {
+            engineState.current = rebuilt;
+            console.log(`[hybrid] engine synced from server (round ${serverRoundNum}, hybrid=${isHybridOn})`);
+          }
+
+          // Always broadcast current engine state to peers when hybrid is active
+          if (isHybridOn && engineState.current) {
+            broadcastState(engineState.current);
+          }
         }
       }
     };
@@ -353,30 +369,67 @@ const useHybridGame = ({ gameId, user, socket }) => {
   }, [_applyEngineAction]);
 
   // -------------------------------------------------------------------------
-  // handleAction — ALL actions go via REST API (server is truth).
-  // After server responds, the socket update handler broadcasts new
-  // state to peers via DataChannel (the actual WebRTC latency win).
+  // handleAction
+  // When WebRTC is active:
+  //   HOST  → local engine (zero server round-trip)
+  //   PEER  → DataChannel to Host engine (LAN latency only)
+  // Fallback (WebRTC not ready):
+  //   ALL   → REST API + engine re-sync from response
   // -------------------------------------------------------------------------
   const handleAction = useCallback(async (action) => {
     setProcessing(true);
     try {
-      let updatedRound;
-      switch (action) {
-        case 'BET':               updatedRound = await roundApi.bet(round._id); break;
-        case 'BET_TWICE':         updatedRound = await roundApi.betTwice(round._id); break;
-        case 'PACK':              updatedRound = await roundApi.pack(round._id); break;
-        case 'SHOW_REQUEST':      updatedRound = await roundApi.requestShow(round._id); break;
-        case 'SIDE_SHOW_REQUEST': updatedRound = await roundApi.requestSideShow(round._id); break;
-        default: throw new Error(`Unknown action: ${action}`);
+      if (isHybridActive && isHost) {
+        // === HOST: run engine locally, broadcast to peers ===
+        const engineFnMap = {
+          BET:              (s, p) => applyBet(s, p),
+          BET_TWICE:        (s, p) => applyBetTwice(s, p),
+          PACK:             (s, p) => applyPack(s, p),
+          SHOW_REQUEST:     (s, p) => applyShowRequest(s, p),
+          SIDE_SHOW_REQUEST:(s, p) => applySideShowRequest(s, p),
+        };
+        const fn = engineFnMap[action];
+        if (!fn) throw new Error(`Unknown action: ${action}`);
+        _applyEngineAction(fn, { userId: user._id });
+
+      } else if (isHybridActive && !isHost) {
+        // === PEER: send to host via DataChannel — no server call ===
+        sendWebRTCAction({
+          actionType: action,
+          payload: { userId: user._id },
+        });
+        // setProcessing will be cleared when state arrives back from host
+        // (via onStateUpdate). Clear it here too so UI isn't permanently stuck.
+        setProcessing(false);
+        return;
+
+      } else {
+        // === FALLBACK: REST API (WebRTC not established yet) ===
+        let updatedRound;
+        switch (action) {
+          case 'BET':               updatedRound = await roundApi.bet(round._id); break;
+          case 'BET_TWICE':         updatedRound = await roundApi.betTwice(round._id); break;
+          case 'PACK':              updatedRound = await roundApi.pack(round._id); break;
+          case 'SHOW_REQUEST':      updatedRound = await roundApi.requestShow(round._id); break;
+          case 'SIDE_SHOW_REQUEST': updatedRound = await roundApi.requestSideShow(round._id); break;
+          default: throw new Error(`Unknown action: ${action}`);
+        }
+        if (updatedRound) {
+          setRound(updatedRound);
+          // Host: re-sync engine from server response (fallback mode)
+          if (isHostRef.current && game) {
+            const rebuilt = _buildEngineStateFromDB(game, updatedRound);
+            if (rebuilt) engineState.current = rebuilt;
+          }
+        }
       }
-      if (updatedRound) setRound(updatedRound);
     } catch (err) {
       console.error('[hybrid] handleAction error:', err);
       throw err;
     } finally {
       setProcessing(false);
     }
-  }, [round, user]);
+  }, [isHybridActive, isHost, _applyEngineAction, sendWebRTCAction, round, user, game]);
 
   // -------------------------------------------------------------------------
   // handleStartRound
