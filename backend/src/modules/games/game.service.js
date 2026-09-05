@@ -6,8 +6,8 @@ const _emitUpdate = async (gameId) => {
   try {
     const game = await Game.findById(gameId)
       .populate('createdBy', 'name username profilePicture')
-      .populate('participants.userId', 'name username profilePicture')
-      .populate('turnOrder', 'name username profilePicture');
+      .populate('participants.userId', 'name username profilePicture globalBalance')
+      .populate('turnOrder', 'name username profilePicture globalBalance');
 
     const Round = require('../rounds/round.model');
     let round = null;
@@ -51,8 +51,8 @@ const getGameHistoryForUser = async (userId) => {
 const getGameById = async (gameId) => {
   const game = await Game.findById(gameId)
     .populate('createdBy', 'name username profilePicture')
-    .populate('participants.userId', 'name username profilePicture')
-    .populate('turnOrder', 'name username profilePicture');
+    .populate('participants.userId', 'name username profilePicture globalBalance')
+    .populate('turnOrder', 'name username profilePicture globalBalance');
 
   if (!game) {
     throw new Error('Game not found');

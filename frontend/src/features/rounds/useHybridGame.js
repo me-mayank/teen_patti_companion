@@ -140,7 +140,15 @@ const _buildEngineStateFromDB = (dbGame, dbRound) => {
       const dbParticipant = dbGame.participants.find(
         gp => gp.userId?._id?.toString() === p.userId
       );
-      return { ...p, gameBalance: dbParticipant?.balance ?? p.gameBalance };
+      const globalBal = dbParticipant?.userId?.globalBalance ?? 0;
+      const inGameBal = dbParticipant?.balance ?? 0;
+      return {
+        ...p,
+        // Effective game balance = in-game running balance + global wallet.
+        // Bets deduct from in-game balance; if in-game goes negative the
+        // player covers it from their global wallet at settlement.
+        gameBalance: inGameBal + globalBal,
+      };
     });
   }
 

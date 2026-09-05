@@ -38,9 +38,13 @@ const _checkBalance = async (game, userId, amountRequired, session) => {
   const user = await User.findById(userId).session(session);
   if (!user) throw new Error('User not found');
 
-  const availableBalance = user.globalBalance + participant.balance;
+  // Effective balance = in-game running balance + global wallet.
+  // participant.balance tracks winnings/losses within the game session.
+  // If it goes negative (player lost their deposit), they can still bet
+  // as long as their global wallet covers it — settled at game end.
+  const availableBalance = participant.balance + user.globalBalance;
   if (availableBalance < amountRequired) {
-    const err = new Error(`Insufficient wallet balance. Required: ₹${amountRequired}, Available: ₹${availableBalance}`);
+    const err = new Error(`Insufficient balance. Required: ₹${amountRequired}, Available: ₹${availableBalance}`);
     err.statusCode = 400;
     throw err;
   }
