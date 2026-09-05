@@ -558,16 +558,35 @@ const useHybridGame = ({ gameId, user, socket }) => {
     setProcessing(true);
     try {
       if (isHybridActive && isHost) {
+        // Apply locally in engine
         _applyEngineAction(applyShowResult, { userId: user._id, winnerUserId });
-        // Always finalize show result via REST for DB persistence
-        await roundApi.submitShowResult(round._id, winnerUserId);
+        // Settle to server via settleRound (same as pack win path).
+        // Do NOT call submitShowResult REST — that requires round.status===SHOW_PENDING
+        // which the server never saw (show request ran through engine locally).
+        const engineRound = engineState.current?.round;
+        if (engineRound && round?._id) {
+          setSyncing(true);
+          try {
+            const playerContributions = engineRound.players.map(rp => ({
+              userId: rp.userId,
+              totalContribution: rp.totalContribution || 0,
+            }));
+            await roundApi.settleRound(round._id, {
+              winnerId:           winnerUserId,
+              potAmount:          engineRound.potAmount,
+              playerContributions,
+            });
+          } finally {
+            setSyncing(false);
+          }
+        }
       } else {
         const updated = await roundApi.submitShowResult(round._id, winnerUserId);
         setRound(updated);
       }
     } catch (err) { throw err; }
     finally { setProcessing(false); }
-  }, [isHybridActive, isHost, _applyEngineAction, round, user]);
+  }, [isHybridActive, isHost, _applyEngineAction, round, user, game]);
 
   return {
     game,

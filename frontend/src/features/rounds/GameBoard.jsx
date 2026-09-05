@@ -49,6 +49,14 @@ const GameBoard = () => {
   const isMyTurn = round && round.players[round.currentTurnIndex]?.userId?._id === user._id;
   const activePlayersCount = round?.players?.filter(p => p.status === 'ACTIVE').length || 0;
 
+  // Resolve winner full user object from participants (needed in hybrid mode
+  // where round.winnerId is only { _id: string } from the engine, no name/avatar)
+  const winnerUser = round?.winnerId
+    ? game?.participants?.find(
+        p => p.userId?._id?.toString() === (round.winnerId?._id?.toString() || round.winnerId?.toString())
+      )?.userId || round.winnerId
+    : null;
+
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center">
@@ -273,14 +281,14 @@ const GameBoard = () => {
              
              {/* Winner Avatar */}
              <div className="w-24 h-24 sm:w-32 sm:h-32 mb-4 rounded-full bg-[#12100F] border-4 border-[#D7A656] shadow-[0_0_30px_rgba(215,166,86,0.6)] flex items-center justify-center text-4xl sm:text-5xl font-bold text-white overflow-hidden">
-               {round.winnerId?.profilePicture ? (
-                 <img src={round.winnerId.profilePicture} alt="Winner" className="w-full h-full object-cover" />
+               {winnerUser?.profilePicture ? (
+                 <img src={winnerUser.profilePicture} alt="Winner" className="w-full h-full object-cover" />
                ) : (
-                 round.winnerId?.name?.charAt(0).toUpperCase() || '?'
+                 winnerUser?.name?.charAt(0).toUpperCase() || '?'
                )}
              </div>
 
-             <h2 className="text-4xl font-bold text-emerald-400 mb-2 text-center">{round.winnerId?.name || 'Someone'} Won!</h2>
+             <h2 className="text-4xl font-bold text-[#D7A656] mb-2 text-center">{winnerUser?.name || winnerUser?.username || 'Someone'} Won!</h2>
              <p className="text-2xl text-white font-medium mb-12">Total Pot: ₹{round.potAmount}</p>
 
              {game?.createdBy?._id === user._id ? (
