@@ -46,7 +46,7 @@ const GameBoard = () => {
     }
   };
 
-  const isMyTurn = round && round.players[round.currentTurnIndex]?.userId?._id === user._id;
+  const isMyTurn = round && round.players[round.currentTurnIndex]?.userId?._id === user?._id;
   const activePlayersCount = round?.players?.filter(p => p.status === 'ACTIVE').length || 0;
 
   // Resolve winner full user object from participants (needed in hybrid mode
@@ -127,7 +127,7 @@ const GameBoard = () => {
           </p>
         </div>
         <div className="flex gap-2">
-          {game?.createdBy?._id === user._id && (
+          {game?.createdBy?._id === user?._id && (
             <button 
               onClick={handleEndGame}
               disabled={processing}
@@ -151,8 +151,8 @@ const GameBoard = () => {
         {/* Side Show Overlay */}
         {round?.status === 'SIDE_SHOW_PENDING' && (() => {
           const ssReq = round.sideShowRequest;
-          const isTarget = ssReq?.targetPlayer === user._id;
-          const isRequester = ssReq?.requestedBy === user._id;
+          const isTarget = ssReq?.targetPlayer === user?._id;
+          const isRequester = ssReq?.requestedBy === user?._id;
           const targetPlayerObj = round.players.find(p => p.userId?._id === ssReq?.targetPlayer);
           const reqPlayerObj = round.players.find(p => p.userId?._id === ssReq?.requestedBy);
 
@@ -234,7 +234,7 @@ const GameBoard = () => {
         {round?.status === 'SHOW_PENDING' && (
           <div className="absolute inset-0 bg-slate-950/90 backdrop-blur-md z-50 flex flex-col items-center justify-center p-4">
             <h2 className="text-3xl font-bold text-[#D7A656] mb-2">Showdown!</h2>
-            {game?.createdBy?._id === user._id ? (
+            {game?.createdBy?._id === user?._id ? (
               <>
                 <p className="text-slate-300 mb-8 text-center max-w-md">
                   Please compare the cards. Click on the winner to distribute the pot of ₹{round.potAmount}.
@@ -291,7 +291,7 @@ const GameBoard = () => {
              <h2 className="text-4xl font-bold text-[#D7A656] mb-2 text-center">{winnerUser?.name || winnerUser?.username || 'Someone'} Won!</h2>
              <p className="text-2xl text-white font-medium mb-12">Total Pot: ₹{round.potAmount}</p>
 
-             {game?.createdBy?._id === user._id ? (
+             {game?.createdBy?._id === user?._id ? (
                <>
                  {syncing ? (
                    // Cloud sync loading screen
@@ -323,7 +323,7 @@ const GameBoard = () => {
         )}
 
         {/* Placeholder for when no round is active */}
-        {!round && game?.currentRoundNumber === 0 && game?.createdBy?._id === user._id && (
+        {!round && game?.currentRoundNumber === 0 && game?.createdBy?._id === user?._id && (
           <div className="absolute inset-0 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm z-50">
             <button 
               onClick={handleStartRound}
@@ -408,7 +408,7 @@ const GameBoard = () => {
                   <PlayerCircle 
                     player={playerWithBalance} 
                     isCurrentTurn={round.currentTurnIndex === i} 
-                    isMe={p.userId?._id === user._id}
+                    isMe={p.userId?._id === user?._id}
                   />
                 </div>
               );
