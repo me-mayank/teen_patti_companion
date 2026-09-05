@@ -56,6 +56,7 @@ const useWebRTC = ({
   gameId,
   userId,
   isHost: isHostProp,
+  enabled,          // NEW: don't start signaling until caller knows host/peer role
   onStateUpdate,
   onEvent,
   onAction,
@@ -221,7 +222,7 @@ const useWebRTC = ({
   // Socket.IO signaling event subscriptions
   // ---------------------------------------------------------------------------
   useEffect(() => {
-    if (!socket || !gameId || !userId) return;
+    if (!enabled || !socket || !gameId || !userId) return;
 
     // Register for the game room (existing functionality)
     socket.emit('joinGame', gameId);
@@ -274,7 +275,7 @@ const useWebRTC = ({
       socket.off('webrtc:ice');
       clearTimeout(fallbackTimer.current);
     };
-  }, [socket, gameId, userId, isHostProp, _createOffer, _handleOffer, _handleAnswer, _handleIce]);
+  }, [enabled, socket, gameId, userId, isHostProp, _createOffer, _handleOffer, _handleAnswer, _handleIce]);
 
   // ---------------------------------------------------------------------------
   // Cleanup all peer connections on unmount

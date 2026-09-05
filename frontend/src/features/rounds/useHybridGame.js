@@ -161,10 +161,15 @@ const useHybridGame = ({ gameId, user, socket }) => {
   const engineState = useRef(null);      // In-memory game state for host engine
   const snapshotCounter = useRef(0);     // Counts commits since last cloud snapshot
 
-  // -- Determine if this user is the host ----------------------------------
-  // The game creator is always the host
-  const isHost = game?.createdBy?._id === user?._id ||
-                 game?.createdBy?.toString() === user?._id?.toString();
+  // -- Stable host determination -------------------------------------------
+  // isHost MUST be known before WebRTC signaling starts. We derive it once
+  // inside fetchGameState (when we first receive the game object) and store
+  // it in a ref so it never flips mid-session and never stales in closures.
+  const isHostRef = useRef(false);
+  const [isHostKnown, setIsHostKnown] = useState(false); // gate for WebRTC
+
+  // Stable derived value — components read this
+  const isHost = isHostRef.current;
 
   // -- WebRTC ---------------------------------------------------------------
   const peerActionHandlerRef = useRef(null);
@@ -178,7 +183,8 @@ const useHybridGame = ({ gameId, user, socket }) => {
     socket,
     gameId,
     userId: user?._id,
-    isHost,
+    isHost,            // stable ref value — correct by the time enabled flips
+    enabled: isHostKnown, // only start signaling once we know host vs peer
     onStateUpdate: useCallback((incomingEngineState) => {
       // PEER: received new authoritative state from host
       // Convert back to DB-shape for the existing UI
@@ -189,7 +195,6 @@ const useHybridGame = ({ gameId, user, socket }) => {
       const winEvent = events.find(e => e.type === 'ROUND_WIN');
       if (winEvent) {
         console.log('[hybrid] ROUND_WIN event received:', winEvent);
-        // Could trigger a toast here
       }
     }, []),
     onAction: useCallback((msg) => {
@@ -199,8 +204,7 @@ const useHybridGame = ({ gameId, user, socket }) => {
     }, []),
   });
 
-  const isHybridActive = false; // TODO: enable once WebRTC signaling is stable in prod
-  // const isHybridActive = isWebRTCReady;
+  const isHybridActive = isWebRTCReady;  // WebRTC re-enabled with proper timing
 
   // -------------------------------------------------------------------------
   // Fetch initial game state from server
@@ -212,8 +216,16 @@ const useHybridGame = ({ gameId, user, socket }) => {
       setGame(g);
       setRound(r);
 
+      // Determine host status ONCE — stored in a ref so it's stable
+      // This must happen before WebRTC signaling (gated by isHostKnown).
+      const hostCheck =
+        g?.createdBy?._id?.toString() === user?._id?.toString() ||
+        g?.createdBy?.toString() === user?._id?.toString();
+      isHostRef.current = hostCheck;
+      setIsHostKnown(true); // ← unblocks WebRTC signaling with correct role
+
       // HOST: Initialize the local engine state from DB data
-      if (g?.createdBy?._id === user?._id || g?.createdBy?.toString() === user?._id) {
+      if (hostCheck) {
         const builtState = _buildEngineStateFromDB(g, r);
         if (builtState) {
           engineState.current = builtState;
