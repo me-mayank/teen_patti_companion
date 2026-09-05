@@ -681,11 +681,15 @@ const _applyEngineStateToUI = (engineState, setGame, setRound) => {
         potAmount: r.potAmount,
         currentBet: r.currentBet,
         currentTurnIndex: r.currentTurnIndex,
-        players: r.players.map(rp => ({
-          ...(prev?.players?.find(pp => pp.userId?._id?.toString() === rp.userId) || {}),
-          status: rp.status,
-          totalContribution: rp.totalContribution,
-        })),
+        players: r.players.map(rp => {
+          const pp = prev?.players?.find(p => (p.userId?._id?.toString() || p.userId?.toString()) === rp.userId);
+          return {
+            ...(pp || {}),
+            userId: pp?.userId || { _id: rp.userId },
+            status: rp.status,
+            totalContribution: rp.totalContribution,
+          };
+        }),
         winnerId: r.winnerId ? { _id: r.winnerId } : null,
       }));
     } else {
@@ -698,11 +702,15 @@ const _applyEngineStateToUI = (engineState, setGame, setRound) => {
         currentBet: r.currentBet,
         startingBet: r.startingBet,
         currentTurnIndex: r.currentTurnIndex,
-        players: r.players.map(rp => ({
-          ...(prev?.players?.find(pp => pp.userId?._id?.toString() === rp.userId) || {}),
-          status: rp.status,
-          totalContribution: rp.totalContribution,
-        })),
+        players: r.players.map(rp => {
+          const pp = prev?.players?.find(p => (p.userId?._id?.toString() || p.userId?.toString()) === rp.userId);
+          return {
+            ...(pp || {}),
+            userId: pp?.userId || { _id: rp.userId },
+            status: rp.status,
+            totalContribution: rp.totalContribution,
+          };
+        }),
         sideShowRequest: r.sideShowRequest,
         winnerId: r.winnerId ? { _id: r.winnerId } : null,
       }));
