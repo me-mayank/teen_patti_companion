@@ -37,6 +37,15 @@ const GameBoard = () => {
     }
   };
 
+  // Wrap to surface errors as alerts (handleAction from hook re-throws)
+  const wrappedHandleAction = async (action) => {
+    try {
+      await handleAction(action);
+    } catch (err) {
+      alert(err.response?.data?.message || err.message || `Failed to perform ${action}`);
+    }
+  };
+
   const isMyTurn = round && round.players[round.currentTurnIndex]?.userId?._id === user._id;
   const activePlayersCount = round?.players?.filter(p => p.status === 'ACTIVE').length || 0;
 
@@ -382,7 +391,7 @@ const GameBoard = () => {
               currentBet={round?.currentBet || game?.bootAmount || 0}
               maxBetLimit={game?.bootAmount * (game?.maxBetMultiplier || 5)}
               activePlayersCount={activePlayersCount}
-              onAction={handleAction}
+              onAction={wrappedHandleAction}
               currentPlayerName={round?.players?.[round?.currentTurnIndex]?.userId?.name}
             />
           </div>

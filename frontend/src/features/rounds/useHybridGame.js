@@ -199,7 +199,8 @@ const useHybridGame = ({ gameId, user, socket }) => {
     }, []),
   });
 
-  const isHybridActive = isWebRTCReady;
+  const isHybridActive = false; // TODO: enable once WebRTC signaling is stable in prod
+  // const isHybridActive = isWebRTCReady;
 
   // -------------------------------------------------------------------------
   // Fetch initial game state from server
