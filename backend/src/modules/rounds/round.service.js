@@ -502,6 +502,69 @@ const getRoundById = async (roundId) => {
     .populate('winnerId', 'name username profilePicture');
 };
 
+// ---------------------------------------------------------------------------
+// settleRound — called by the host after local engine finishes a round.
+// The server doesn't know the round ended (actions ran via DataChannel).
+// This marks it COMPLETED, records the ROUND_WIN ledger entry, and
+// updates participant balances so startRound can proceed.
+// ---------------------------------------------------------------------------
+const settleRound = async (roundId, { winnerId, potAmount, playerContributions }, requestingUserId) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  try {
+    const round = await Round.findById(roundId).session(session);
+    if (!round) throw new Error('Round not found');
+
+    // Idempotent: already settled (e.g. double-click)
+    if (round.status === 'COMPLETED') {
+      await session.abortTransaction();
+      return round;
+    }
+
+    const game = await Game.findById(round.gameId).session(session);
+    if (!game) throw new Error('Game not found');
+
+    // Only the game creator (host) can settle
+    if (game.createdBy.toString() !== requestingUserId.toString()) {
+      throw new Error('Only the host can settle a round');
+    }
+
+    // Apply each player's contribution delta to their participant balance
+    if (playerContributions && Array.isArray(playerContributions)) {
+      for (const { userId, totalContribution } of playerContributions) {
+        const participant = game.participants.find(p => p.userId.toString() === userId.toString());
+        if (participant) {
+          // totalContribution is how much they put INTO the pot this round (boot + bets)
+          participant.balance -= totalContribution;
+        }
+      }
+    }
+
+    // Credit winner with pot
+    const winnerParticipant = game.participants.find(p => p.userId.toString() === winnerId.toString());
+    if (winnerParticipant) {
+      winnerParticipant.balance += potAmount;
+    }
+
+    await game.save({ session });
+
+    // Mark round COMPLETED
+    await _completeRound(session, round, winnerId);
+
+    await session.commitTransaction();
+
+    const { getIO } = require('../../shared/sockets');
+    getIO().to(`game:${round.gameId}`).emit('round:update', { roundId: round._id });
+
+    return round;
+  } catch (error) {
+    await session.abortTransaction();
+    throw error;
+  } finally {
+    session.endSession();
+  }
+};
+
 module.exports = {
   startRound,
   bet,
@@ -513,4 +576,5 @@ module.exports = {
   requestShow,
   submitShowResult,
   getRoundById,
+  settleRound,
 };

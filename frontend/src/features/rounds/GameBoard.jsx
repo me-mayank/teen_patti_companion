@@ -18,7 +18,7 @@ const GameBoard = () => {
 
   const {
     game, round,
-    loading, processing,
+    loading, processing, syncing,
     isHybridActive,
     handleAction,
     handleStartRound,
@@ -284,13 +284,28 @@ const GameBoard = () => {
              <p className="text-2xl text-white font-medium mb-12">Total Pot: ₹{round.potAmount}</p>
 
              {game?.createdBy?._id === user._id ? (
-               <button 
-                 onClick={handleStartRound}
-                 disabled={processing}
-                 className="bg-emerald-500 text-slate-950 font-bold px-10 py-4 rounded-xl shadow-[0_0_30px_rgba(16,185,129,0.3)] hover:bg-emerald-400 hover:scale-105 transition-all flex items-center gap-2 text-lg"
-               >
-                 {processing ? <Loader2 className="w-6 h-6 animate-spin" /> : 'Start Next Round'}
-               </button>
+               <>
+                 {syncing ? (
+                   // Cloud sync loading screen
+                   <div className="flex flex-col items-center gap-4">
+                     <div className="flex items-center gap-3 bg-slate-900/80 border border-[#D7A656]/30 px-6 py-4 rounded-2xl">
+                       <Loader2 className="w-6 h-6 text-[#D7A656] animate-spin" />
+                       <div>
+                         <p className="text-[#D7A656] font-semibold">Syncing to cloud...</p>
+                         <p className="text-slate-400 text-xs mt-0.5">Saving round result to server</p>
+                       </div>
+                     </div>
+                   </div>
+                 ) : (
+                   <button 
+                     onClick={handleStartRound}
+                     disabled={processing || syncing}
+                     className="bg-[#D7A656] text-black font-bold px-10 py-4 rounded-xl shadow-[0_0_30px_rgba(215,166,86,0.3)] hover:bg-[#c2954c] hover:scale-105 transition-all flex items-center gap-2 text-lg"
+                   >
+                     {processing ? <Loader2 className="w-6 h-6 animate-spin" /> : 'Start Next Round'}
+                   </button>
+                 )}
+               </>
              ) : (
                <p className="text-slate-400 font-medium bg-slate-900 px-6 py-3 rounded-full animate-pulse border border-slate-800">
                  Waiting for creator to start next round...

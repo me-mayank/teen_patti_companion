@@ -10,6 +10,7 @@ const {
   requestShow,
   submitShowResult,
   getRound,
+  settleRound,
 } = require('./round.controller');
 const { protect } = require('../../shared/middleware/auth.middleware');
 const { validate } = require('../../shared/middleware/validate.middleware');
@@ -23,6 +24,7 @@ router.route('/:id').get(protect, getRound);
 router.route('/:id/bet').post(protect, bet);
 router.route('/:id/bet-twice').post(protect, betTwice);
 router.route('/:id/pack').post(protect, pack);
+router.route('/:id/settle').post(protect, settleRound); // Hybrid: host settles completed round
 
 router.route('/:id/side-show/request').post(protect, requestSideShow);
 router.route('/:id/side-show/respond').post(protect, validate(sideShowRespondSchema), respondSideShow);

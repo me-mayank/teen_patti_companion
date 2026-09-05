@@ -140,13 +140,13 @@ const _buildEngineStateFromDB = (dbGame, dbRound) => {
       const dbParticipant = dbGame.participants.find(
         gp => gp.userId?._id?.toString() === p.userId
       );
-      const globalBal = dbParticipant?.userId?.globalBalance ?? 0;
-      const inGameBal = dbParticipant?.balance ?? 0;
+      const globalBal  = dbParticipant?.userId?.globalBalance ?? 0;
+      const inGameBal  = dbParticipant?.balance ?? 0;
       return {
         ...p,
-        // Effective game balance = in-game running balance + global wallet.
-        // Bets deduct from in-game balance; if in-game goes negative the
-        // player covers it from their global wallet at settlement.
+        // inGameBalance: what's shown in the UI (net result within this game)
+        inGameBalance: inGameBal,
+        // gameBalance: used for bankruptcy check — covers in-game losses from wallet
         gameBalance: inGameBal + globalBal,
       };
     });
@@ -164,6 +164,7 @@ const useHybridGame = ({ gameId, user, socket }) => {
   const [round, setRound] = useState(null);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
+  const [syncing, setSyncing] = useState(false); // cloud sync in progress
 
   // -- Hybrid engine state (host only) -------------------------------------
   const engineState = useRef(null);      // In-memory game state for host engine
@@ -441,10 +442,42 @@ const useHybridGame = ({ gameId, user, socket }) => {
 
   // -------------------------------------------------------------------------
   // handleStartRound
+  // When hybrid is active: HOST must first settle the completed round to
+  // the cloud (so server knows it's done), then start the next round.
+  // Shows a "Syncing to cloud..." state while the settle call is in flight.
   // -------------------------------------------------------------------------
   const handleStartRound = useCallback(async () => {
     setProcessing(true);
     try {
+      // If WebRTC is active and there's a completed round in the engine,
+      // settle it to the server before starting the next round.
+      if (isHybridActive && isHost && engineState.current?.round) {
+        const engineRound = engineState.current.round;
+        const enginePlayers = engineState.current.players;
+
+        // Only settle if the engine says the round is completed
+        if (engineRound.status === 'COMPLETED' && engineRound.winnerId && round?._id) {
+          setSyncing(true);
+          setProcessing(false); // Let syncing state drive the loading UI
+          try {
+            // Build player contribution list from engine round state
+            const playerContributions = engineRound.players.map(rp => ({
+              userId: rp.userId,
+              totalContribution: rp.totalContribution || 0,
+            }));
+
+            await roundApi.settleRound(round._id, {
+              winnerId: engineRound.winnerId,
+              potAmount: engineRound.potAmount,
+              playerContributions,
+            });
+          } finally {
+            setSyncing(false);
+          }
+          setProcessing(true);
+        }
+      }
+
       await roundApi.startRound(gameId);
     } catch (err) {
       console.error('[hybrid] handleStartRound error:', err);
@@ -452,7 +485,7 @@ const useHybridGame = ({ gameId, user, socket }) => {
     } finally {
       setProcessing(false);
     }
-  }, [gameId]);
+  }, [isHybridActive, isHost, round, gameId]);
 
   // -------------------------------------------------------------------------
   // handleEndGame
@@ -533,6 +566,7 @@ const useHybridGame = ({ gameId, user, socket }) => {
     round,
     loading,
     processing,
+    syncing,
     isHybridActive,
     isHost,
     handleAction,
@@ -561,7 +595,9 @@ const _applyEngineStateToUI = (engineState, setGame, setRound) => {
         const ep = engineState.players.find(
           p => p.userId === gp.userId?._id?.toString()
         );
-        return ep ? { ...gp, balance: ep.gameBalance } : gp;
+        // Show only in-game balance (not global wallet) to the player.
+        // Global wallet is only used for bankruptcy check (gameBalance).
+        return ep ? { ...gp, balance: ep.inGameBalance ?? ep.gameBalance } : gp;
       }),
     };
   });

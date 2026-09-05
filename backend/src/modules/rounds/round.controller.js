@@ -81,6 +81,19 @@ const getRound = asyncHandler(async (req, res) => {
   res.json(round);
 });
 
+// @desc    Settle a round (host-only, called after local engine completes round)
+// @route   POST /api/rounds/:id/settle
+// @access  Private
+const settleRound = asyncHandler(async (req, res) => {
+  const { winnerId, potAmount, playerContributions } = req.body;
+  const round = await roundService.settleRound(
+    req.params.id,
+    { winnerId, potAmount, playerContributions },
+    req.user._id
+  );
+  res.json(round);
+});
+
 module.exports = {
   startRound,
   bet,
@@ -91,5 +104,6 @@ module.exports = {
   submitSideShowResult,
   requestShow,
   submitShowResult,
-  getRound
+  getRound,
+  settleRound,
 };

@@ -49,3 +49,13 @@ export const submitShowResult = async (roundId, winnerUserId) => {
   const response = await axiosClient.post(`/rounds/${roundId}/show/result`, { winnerUserId });
   return response.data;
 };
+
+// Hybrid: host calls this after local engine completes a round, to sync result to server
+export const settleRound = async (roundId, { winnerId, potAmount, playerContributions }) => {
+  const response = await axiosClient.post(`/rounds/${roundId}/settle`, {
+    winnerId,
+    potAmount,
+    playerContributions,
+  });
+  return response.data;
+};
