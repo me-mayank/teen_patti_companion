@@ -56,10 +56,12 @@ const useWebRTC = ({
   gameId,
   userId,
   isHost: isHostProp,
-  enabled,          // NEW: don't start signaling until caller knows host/peer role
+  enabled,          // don't start signaling until caller knows host/peer role
   onStateUpdate,
   onEvent,
   onAction,
+  onConnect,        // NEW: called when DataChannel is established (Server→P2P)
+  onDisconnect,     // NEW: called when ALL peers disconnect (P2P→Server fallback)
 }) => {
   // Map of peerUserId → RTCPeerConnection
   const peerConnections = useRef(new Map());
@@ -72,10 +74,10 @@ const useWebRTC = ({
   const fallbackTimer = useRef(null);
 
   // Use a ref for callbacks so DataChannel handlers never need to re-bind
-  const callbacksRef = useRef({ onStateUpdate, onEvent, onAction });
+  const callbacksRef = useRef({ onStateUpdate, onEvent, onAction, onConnect, onDisconnect });
   useEffect(() => {
-    callbacksRef.current = { onStateUpdate, onEvent, onAction };
-  }, [onStateUpdate, onEvent, onAction]);
+    callbacksRef.current = { onStateUpdate, onEvent, onAction, onConnect, onDisconnect };
+  }, [onStateUpdate, onEvent, onAction, onConnect, onDisconnect]);
 
   // ---------------------------------------------------------------------------
   // DataChannel message handler (called by host AND peer sides)
@@ -125,8 +127,19 @@ const useWebRTC = ({
         setConnectedPeers(prev =>
           prev.includes(peerUserId) ? prev : [...prev, peerUserId]
         );
+        // Notify caller: Server→P2P transition happened for this peer
+        callbacksRef.current.onConnect?.(peerUserId);
       } else if (['disconnected', 'failed', 'closed'].includes(pc.connectionState)) {
-        setConnectedPeers(prev => prev.filter(id => id !== peerUserId));
+        setConnectedPeers(prev => {
+          const next = prev.filter(id => id !== peerUserId);
+          // When ALL peers are gone, revert isWebRTCReady immediately
+          // so the caller falls back to Socket.IO without waiting for the timeout.
+          if (next.length === 0) {
+            setIsWebRTCReady(false);
+            callbacksRef.current.onDisconnect?.(peerUserId);
+          }
+          return next;
+        });
       }
     };
 
@@ -145,7 +158,12 @@ const useWebRTC = ({
     dataChannels.current.set(peerUserId, dc);
 
     dc.onopen = () => {
-      console.log(`[webrtc] DataChannel open: host ↔ ${peerUserId}`);
+      console.log(`[webrtc] DataChannel open: host \u2194 ${peerUserId}`);
+      // Server→P2P: DataChannel just opened, notify host to push full state
+      callbacksRef.current.onConnect?.(peerUserId);
+    };
+    dc.onclose = () => {
+      console.log(`[webrtc] DataChannel closed: host \u2194 ${peerUserId}`);
     };
     dc.onmessage = (e) => _handleDataChannelMessage(e.data, peerUserId);
     dc.onerror = (e) => console.error(`[webrtc] DC error (${peerUserId}):`, e);
@@ -174,9 +192,16 @@ const useWebRTC = ({
       const dc = event.channel;
       dataChannels.current.set(fromUserId, dc);
       dc.onopen = () => {
-        console.log(`[webrtc] DataChannel open: peer ↔ host`);
+        console.log(`[webrtc] DataChannel open: peer \u2194 host`);
         clearTimeout(fallbackTimer.current);
         setIsWebRTCReady(true);
+        // Server→P2P: notify peer that it's now connected
+        callbacksRef.current.onConnect?.(fromUserId);
+      };
+      dc.onclose = () => {
+        console.log(`[webrtc] DataChannel closed: peer`);
+        setIsWebRTCReady(false);
+        callbacksRef.current.onDisconnect?.(fromUserId);
       };
       dc.onmessage = (e) => _handleDataChannelMessage(e.data, fromUserId);
       dc.onerror = (e) => console.error('[webrtc] DC error (peer):', e);

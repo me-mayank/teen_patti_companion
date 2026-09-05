@@ -219,6 +219,12 @@ const useHybridGame = ({ gameId, user, socket }) => {
         peerActionHandlerRef.current(msg);
       }
     }, []),
+    // P2P→Server: DataChannel dropped— re-fetch from server so both sides
+    // are consistent with DB before falling back to Socket.IO.
+    onDisconnect: useCallback(() => {
+      console.log('[hybrid] onDisconnect: DataChannel lost — re-syncing from server');
+      fetchGameState();
+    }, [fetchGameState]),
   });
 
   const isHybridActive = isWebRTCReady;
@@ -226,7 +232,37 @@ const useHybridGame = ({ gameId, user, socket }) => {
   // Keep a ref for isWebRTCReady so socket closures always read current value
   // without needing to be re-registered when it changes.
   const isWebRTCReadyRef = useRef(false);
+  const wasWebRTCReadyRef = useRef(false); // track previous value to detect transitions
   useEffect(() => { isWebRTCReadyRef.current = isWebRTCReady; }, [isWebRTCReady]);
+
+  // -------------------------------------------------------------------------
+  // Transition: Server → P2P (isWebRTCReady flips true)
+  // HOST: immediately broadcast full engine state to the newly connected peer.
+  // This ensures the peer has the correct, complete state (including totalDeposited,
+  // globalBalance, pot, etc.) before any action fires — preventing zero-sum
+  // violations that occurred when the peer's first state came from a stale socket event.
+  // -------------------------------------------------------------------------
+  useEffect(() => {
+    const prev = wasWebRTCReadyRef.current;
+    wasWebRTCReadyRef.current = isWebRTCReady;
+
+    if (isWebRTCReady && !prev) {
+      // Just became P2P — SERVER→P2P transition
+      console.log('[hybrid] transition: Server→P2P — syncing game state');
+      if (isHostRef.current && engineState.current) {
+        // Small delay to let the DataChannel fully open on both sides
+        setTimeout(() => {
+          if (engineState.current) {
+            broadcastState(engineState.current);
+            console.log('[hybrid] full engine state broadcast to peers on P2P connect');
+          }
+        }, 150);
+      }
+    } else if (!isWebRTCReady && prev) {
+      // Just lost P2P — P2P→SERVER transition (handled by onDisconnect → fetchGameState)
+      console.log('[hybrid] transition: P2P→Server fallback');
+    }
+  }, [isWebRTCReady, broadcastState]);
 
   // -------------------------------------------------------------------------
   // Fetch initial game state from server
